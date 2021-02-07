@@ -2,7 +2,6 @@ const Discord = require("discord.js");
 const fs = require("fs");
 const config = require("./config");
 const colors = require("colors");
-const { debug } = require("console");
 
 const client = new Discord.Client();
 const prefix = "*";
