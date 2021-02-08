@@ -6,6 +6,7 @@ const client = new Discord.Client();
 
 module.exports = {
   name: "dl",
+  alias: ["download", "tiktok", "youtube"],
   description: "download and send videos",
   execute(message, args) {
     if (!args[0]) {
