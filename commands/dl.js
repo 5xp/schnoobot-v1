@@ -7,7 +7,11 @@ module.exports = {
   name: "dl",
   description: "download and send videos",
   execute(message, args) {
-    if (!args[0]) message.reply(`invalid args!`);
+    if (!args[0]) {
+      message.reply(`invalid arguments!`);
+      return;
+    }
+
     const url = args[0].replace(/[<>]/g, "");
     const path = `./temp/video.mp4`;
 
