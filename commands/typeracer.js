@@ -6,7 +6,6 @@ module.exports = {
   name: "typeracer",
   description: "typing contest",
   execute(message, args) {
-    // still need to find a good way to combat copying - canvas?
     const prompts = JSON.parse(fs.readFileSync("./prompts.json"));
     const currentPrompt = prompts[Math.floor(Math.random() * prompts.length)];
     const t = Math.floor((currentPrompt.length / 4.5) * 1.7);
@@ -28,7 +27,7 @@ module.exports = {
         if (counter <= 1) {
           finished = true;
           setTimeout(() => {
-            msg.edit(currentPrompt).then(StartGame());
+            msg.edit(currentPrompt.replace(/ /g, " \u200B")).then(StartGame());
           }, 1000);
         }
 
