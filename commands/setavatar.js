@@ -2,6 +2,7 @@ const config = require("../config.js");
 module.exports = {
   name: "setavatar",
   description: "set the avatar of the bot",
+  category: "Bot owner",
   execute(message, args) {
     if (message.author.id !== config.ownerid) {
       message.reply("You must own the bot to change the avatar!");

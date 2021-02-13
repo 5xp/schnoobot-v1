@@ -51,10 +51,15 @@ function sanitizeString(str) {
   return str.trim();
 }
 
+function CheckPermissions(user, permission) {
+  return (hasPermission = permission => user.hasPermission(permission));
+}
+
 module.exports = {
   FindUser,
   FindVC,
   JoinArgs,
   DownloadFile,
   sanitizeString,
+  CheckPermissions,
 };

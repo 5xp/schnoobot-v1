@@ -1,12 +1,11 @@
+const helper = require("../helper.js");
 module.exports = {
   name: "steal",
   description: "steal an emoji",
-  aliases: ["emoji"],
+  alias: ["emoji"],
+  category: "Utility",
+  required_perms: ["MANAGE_EMOJIS"],
   execute(message, args) {
-    if (!message.member.hasPermission("MANAGE_EMOJIS")) {
-      message.reply("insufficient permissions to create emojis!").then(console.log(`${message.author.username} attempted ${this.name} with insufficient permissions!`.red));
-    }
-
     let attachment = message.attachments.first();
 
     if ((!args[0] || !args[1]) && (!attachment || !args[0])) {

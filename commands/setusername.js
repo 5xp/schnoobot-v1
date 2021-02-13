@@ -3,6 +3,7 @@ const helper = require("../helper.js");
 module.exports = {
   name: "setusername",
   description: "set the name of the bot",
+  category: "Bot owner",
   execute(message, args) {
     if (message.author.id !== config.ownerid) {
       message.reply("You must own the bot to change the avatar!");

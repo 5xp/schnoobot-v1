@@ -5,6 +5,7 @@ const Discord = require("discord.js");
 module.exports = {
   name: "typeracer",
   description: "typing contest",
+  category: "Fun",
   execute(message, args) {
     const prompts = JSON.parse(fs.readFileSync("./prompts.json"));
     const currentPrompt = prompts[Math.floor(Math.random() * prompts.length)];
@@ -69,8 +70,8 @@ module.exports = {
         .setColor("#80ff80")
         .setTitle(`${msg.author.username} finished the race!`)
         .addField("**Place**", `#${finishedIDs.length}`, true)
-        .addField("**WPM**", `${wpm.toFixed(1)}`, true)
-        .addField("**Errors**", `${distance}`, true);
+        .addField("**WPM**", wpm.toFixed(1), true)
+        .addField("**Errors**", distance, true);
 
       message.channel.send(summaryEmbed);
     }

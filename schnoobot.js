@@ -2,9 +2,10 @@ const Discord = require("discord.js");
 const fs = require("fs");
 const config = require("./config");
 const colors = require("colors");
+const helper = require("./helper.js");
 
 const client = new Discord.Client();
-const prefix = "*";
+const prefix = config.prefix;
 
 client.commands = new Discord.Collection();
 
@@ -38,10 +39,14 @@ client.on("message", message => {
       if (c[1].disabled !== undefined && c[1].disabled == true) {
         message.reply("that command is disabled!");
       } else {
-        client.commands.get(c[0]).execute(message, args);
+        if (c[1].required_perms && c[1].required_perms.some(helper.CheckPermissions(message.member, c[1].required_perms))) {
+          client.commands.get(c[0]).execute(message, args);
+        } else {
+          message.reply(`missing permission: \`${c[1].required_perms.join(", ")}\``);
+        }
       }
     }
   }
 });
 
-client.login(config.token);
+client.login(config.devtoken);
