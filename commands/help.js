@@ -15,9 +15,7 @@ module.exports = {
     for (c of client.commands) {
       let cmd = c[1];
       if (cmd.disabled == undefined || !cmd.disabled) {
-        //map.push(cmd.category, [`**${cmd.name}**: ${cmd.description}`]);
         cmdlist[cmd.category].push([`**${cmd.name}**: ${cmd.description}`]);
-        //map.set(cmd.category, map.get(cmd.category).push([`**${cmd.name}**: ${cmd.description}`]));
       }
     }
 
@@ -45,7 +43,9 @@ module.exports = {
       });
     } else {
       let desiredCmd = args[0];
-      const msg = await message.channel.send(GetEmbedSpecific(desiredCmd));
+      let embed = GetEmbedSpecific(desiredCmd);
+      if (embed !== undefined) message.channel.send(GetEmbedSpecific(desiredCmd));
+      else message.reply("invalid arguments!");
     }
 
     function GetEmbedGeneric(page) {
@@ -61,6 +61,7 @@ module.exports = {
 
     function GetEmbedSpecific(cmd) {
       cmd = client.commands.get(cmd);
+      if (cmd == undefined) return undefined;
       var helpEmbed = new Discord.MessageEmbed();
       helpEmbed.setColor("#f03e1f").setTitle(`Showing details for ${config.prefix}${cmd.name}`).setDescription(cmd.description);
       if (cmd.usage) helpEmbed.addField("**Usage**", cmd.usage, true);

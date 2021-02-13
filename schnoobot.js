@@ -39,7 +39,7 @@ client.on("message", message => {
       if (c[1].disabled !== undefined && c[1].disabled == true) {
         message.reply("that command is disabled!");
       } else {
-        if (c[1].required_perms && c[1].required_perms.some(helper.CheckPermissions(message.member, c[1].required_perms))) {
+        if (c[1].required_perms == undefined || c[1].required_perms.some(helper.CheckPermissions(message.member, c[1].required_perms))) {
           client.commands.get(c[0]).execute(message, args);
         } else {
           message.reply(`missing permission: \`${c[1].required_perms.join(", ")}\``);
@@ -49,4 +49,4 @@ client.on("message", message => {
   }
 });
 
-client.login(config.devtoken);
+client.login(config.token);
