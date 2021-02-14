@@ -1,11 +1,11 @@
-const config = require("../config.js");
 const helper = require("../helper.js");
+require("dotenv").config();
 module.exports = {
   name: "setusername",
   description: "set the name of the bot",
   category: "Bot owner",
   execute(message, args) {
-    if (message.author.id !== config.ownerid) {
+    if (message.author.id !== proccess.env.OWNERID) {
       message.reply("You must own the bot to change the avatar!");
       return;
     }

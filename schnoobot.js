@@ -1,11 +1,11 @@
 const Discord = require("discord.js");
 const fs = require("fs");
-const config = require("./config");
 const colors = require("colors");
 const helper = require("./helper.js");
+require("dotenv").config();
 
 const client = new Discord.Client();
-const prefix = config.prefix;
+const prefix = process.env.PREFIX;
 
 client.commands = new Discord.Collection();
 
@@ -49,4 +49,4 @@ client.on("message", message => {
   }
 });
 
-client.login(config.token);
+client.login(process.env.TOKEN);

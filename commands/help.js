@@ -1,11 +1,11 @@
 const Discord = require("discord.js");
-const config = require("../config.js");
+require("dotenv").config();
 
 module.exports = {
   name: "help",
   description: "help",
   alias: ["h"],
-  usage: `\`${config.prefix}help <optional command>\``,
+  usage: `\`${process.env.PREFIX}help <optional command>\``,
   category: "Utility",
   async execute(message, args) {
     let client = message.client;
@@ -63,7 +63,7 @@ module.exports = {
       cmd = client.commands.get(cmd);
       if (cmd == undefined) return undefined;
       var helpEmbed = new Discord.MessageEmbed();
-      helpEmbed.setColor("#f03e1f").setTitle(`Showing details for ${config.prefix}${cmd.name}`).setDescription(cmd.description);
+      helpEmbed.setColor("#f03e1f").setTitle(`Showing details for ${process.env.PREFIX}${cmd.name}`).setDescription(cmd.description);
       if (cmd.usage) helpEmbed.addField("**Usage**", cmd.usage, true);
       if (cmd.alias) helpEmbed.addField("**Aliases**", cmd.alias.join(", "));
       if (cmd.required_perms) helpEmbed.addField("**Permissions required**", cmd.required_perms.join(", "));

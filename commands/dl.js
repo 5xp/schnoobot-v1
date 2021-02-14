@@ -2,13 +2,13 @@ const Discord = require("discord.js");
 const helper = require("../helper.js");
 const ytdl = require("youtube-dl");
 const fs = require("fs");
-const config = require("../config.js");
+require("dotenv").config();
 
 module.exports = {
   name: "dl",
   alias: ["download", "tiktok", "youtube"],
   description: "download and send videos",
-  usage: `\`${config.prefix}dl <url>\``,
+  usage: `\`${process.env.PREFIX}dl <url>\``,
   category: "Utility",
   async execute(message, args) {
     if (!args[0]) {
