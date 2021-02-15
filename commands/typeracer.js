@@ -28,7 +28,8 @@ module.exports = {
         if (counter <= 1) {
           finished = true;
           setTimeout(() => {
-            msg.edit(currentPrompt.replace(/ /g, " \u200B")).then(StartGame());
+            let PromptEmbed = new Discord.MessageEmbed().setColor("#2af7ed").setDescription(currentPrompt.replace(/ /g, " \u200B"));
+            msg.edit(PromptEmbed).then(StartGame());
           }, 1000);
         }
 
@@ -42,7 +43,9 @@ module.exports = {
       updateTime();
     }
 
-    message.channel.send(`The next prompt will last for ${t} seconds.`).then(countdown());
+    let InitialEmbed = new Discord.MessageEmbed().setColor("#6a00ff").setDescription(`🕑 You will have ${t} seconds to finish this prompt.`);
+
+    message.channel.send(InitialEmbed).then(countdown());
 
     function StartGame() {
       collector = message.channel.createMessageCollector(filter, { time: t * 1000 });
