@@ -4,6 +4,7 @@ const helper = require("../helper.js");
 module.exports = {
   name: "avatar",
   description: "show avatar of yourself or another user",
+  usage: `\`${process.env.PREFIX}avatar @user\``,
   category: "Utility",
   alias: ["av", "pfp"],
   execute(message, args) {
