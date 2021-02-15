@@ -31,7 +31,10 @@ module.exports = {
     }
 
     function CheckValid(origin, destination) {
-      if (origin == null || destination == null || destination.type !== "voice") {
+      if (!message.member.voice.channel) {
+        message.reply("you must be in a voice channel!");
+        return false;
+      } else if (origin == null || destination == null || destination.type !== "voice") {
         message.reply("invalid arguments!");
         return false;
       } else if (!message.member.permissionsIn(destination).has("CONNECT")) {
