@@ -1,5 +1,4 @@
 const helper = require("../helper.js");
-require("dotenv").config();
 module.exports = {
   name: "setpresence",
   description: "set the presence of the bot",

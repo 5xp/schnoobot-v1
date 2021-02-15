@@ -2,7 +2,6 @@ const Discord = require("discord.js");
 const helper = require("../helper.js");
 const ytdl = require("youtube-dl");
 const fs = require("fs");
-require("dotenv").config();
 
 module.exports = {
   name: "dl",

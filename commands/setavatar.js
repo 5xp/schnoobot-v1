@@ -1,4 +1,3 @@
-require("dotenv").config();
 module.exports = {
   name: "setavatar",
   description: "set the avatar of the bot",

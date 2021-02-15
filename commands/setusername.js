@@ -1,5 +1,4 @@
 const helper = require("../helper.js");
-require("dotenv").config();
 module.exports = {
   name: "setusername",
   description: "set the name of the bot",
