@@ -18,13 +18,18 @@ module.exports = {
     var ext;
     const url = args[0].replace(/[<>]/g, "");
     const dir = `./temp`;
-    var GetPath = () => {
-      return `${dir}/output.${ext}`;
-    };
 
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir);
     }
+
+    var GetPath = () => {
+      let num;
+      fs.readdir(dir, (err, files) => {
+        num = files.length;
+      });
+      return `${dir}/output${num}.${ext}`;
+    };
 
     options = args.length > 1 ? helper.JoinArgs(args.slice(1)).split(", ") : ["--dump-json", "-f best"];
 
