@@ -24,10 +24,7 @@ module.exports = {
     }
 
     var GetPath = () => {
-      let num;
-      fs.readdir(dir, (err, files) => {
-        num = files.length;
-      });
+      let num = message.id;
       return `${dir}/output${num}.${ext}`;
     };
 
@@ -38,6 +35,7 @@ module.exports = {
     ytdl.getInfo(url, options, function (err, info) {
       if (err) throw err;
       ext = info.ext;
+      path = GetPath();
       const video = ytdl(url, options)
         // check for error before we download file
         .on("error", function error(error) {
@@ -47,18 +45,18 @@ module.exports = {
         .on("info", function (info) {
           msg.edit("Downloading file...");
         })
-        .pipe(fs.createWriteStream(GetPath()))
+        .pipe(fs.createWriteStream(path))
 
         // wait to send after it finishes downloading
         .on("close", function () {
-          let sendAttachment = new Discord.MessageAttachment(GetPath());
+          let sendAttachment = new Discord.MessageAttachment(path);
           message.channel
             .send(sendAttachment)
             .then(msg.edit("Uploading file..."))
             // delete file after it finishes sending
             .then(() => {
               msg.delete();
-              fs.unlink(GetPath(), err => {
+              fs.unlink(path, err => {
                 if (err) throw err;
               });
             })
