@@ -8,7 +8,7 @@ module.exports = {
   category: "Utility",
   async execute(message, args) {
     let client = message.client;
-    let cmdlist = { Utility: [], Fun: [], "Bot owner": [] };
+    let cmdlist = { Utility: [], Fun: [], "Guild settings": [], "Bot owner": [] };
     let currentPage = 0;
 
     for (c of client.commands) {
