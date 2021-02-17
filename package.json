@@ -15,6 +15,7 @@
     "ffmpeg": "0.0.4",
     "js-levenshtein": "^1.1.6",
     "owoify-js": "^1.0.7",
+    "mongoose": "^5.11.16",
     "request": "^2.88.2",
     "youtube-dl": "^3.1.0"
   }

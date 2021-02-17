@@ -1,4 +1,6 @@
+require("dotenv").config();
 const Discord = require("discord.js");
+const mongo = require("./mongo.js");
 const fs = require("fs");
 const colors = require("colors");
 const helper = require("./helper.js");
@@ -16,8 +18,11 @@ for (const file of commandFiles) {
   client.commands.set(command.name, command);
 }
 
-client.once("ready", () => {
+client.once("ready", async () => {
   console.log(`Schnoobot is online!`.blue);
+  await mongo().then(mongoose => {
+    console.log(`Connected to mongo!`.green);
+  });
 });
 
 //commands
