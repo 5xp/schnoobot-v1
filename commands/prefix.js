@@ -4,7 +4,7 @@ const helper = require("../helper");
 module.exports = {
   name: "prefix",
   description: "set guild prefix",
-  category: "Utility",
+  category: "Guild settings",
   required_perms: ["ADMINISTRATOR"],
   cache: {},
   async execute(message, args) {
