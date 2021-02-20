@@ -8,7 +8,6 @@ module.exports = {
   required_perms: ["ADMINISTRATOR"],
   cache: {},
   async execute(message, args) {
-    // TODO: show prefix and reset prefix
     let newPrefix = helper.JoinArgs(args);
     if (args.length) {
       if (newPrefix == "reset") newPrefix = process.env.PREFIX;
@@ -36,7 +35,6 @@ module.exports = {
   async checkCache(message) {
     let prefix = this.cache[message.guild.id];
     if (!prefix) {
-      console.log("fetching database");
       const result = await settingsSchema.findOne({ _id: message.guild.id });
       localprefix = result ? result.prefix : process.env.PREFIX;
       this.cache[message.guild.id] = prefix = localprefix;

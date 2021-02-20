@@ -42,8 +42,10 @@ client.on("message", async message => {
       if ((!message.content.startsWith(prefix) && !(message.mentions.users.size && message.mentions.users.first().id == client.user.id)) || message.author.bot || !message.guild) return;
 
       // if user mentions client
-      const args = message.mentions.users.size ? message.content.replace(`<@!${message.mentions.users.first().id}> `, "").split(/ +/) : message.content.slice(prefix.length).split(/ +/);
-      console.log(args);
+      const args =
+        message.mentions.users.size && message.mentions.users.first().id == client.user.id
+          ? message.content.replace(`<@!${message.mentions.users.first().id}> `, "").split(/ +/)
+          : message.content.slice(prefix.length).split(/ +/);
       const command = args.shift().toLowerCase();
 
       for (c of client.commands) {

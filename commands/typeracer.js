@@ -1,11 +1,19 @@
 const fs = require("fs");
 const levenshtein = require("js-levenshtein");
 const Discord = require("discord.js");
+const leaderboardSchema = require("../schemas/typeracer-leaderboard-schema");
+const helper = require("../helper.js");
 
 module.exports = {
   name: "typeracer",
   description: "typing contest",
   category: "Fun",
+  usage: `\`${process.env.PREFIX}typeracer\`\n
+  \`${process.env.PREFIX}typeracer top\`\n
+  \`${process.env.PREFIX}typeracer me\`\n
+  \`${process.env.PREFIX}typeracer <@user>\`\n
+  \`${process.env.PREFIX}typeracer <rank>\``,
+  alias: ["type", "t"],
   execute(message, args) {
     const prompts = JSON.parse(fs.readFileSync("./prompts.json"));
     const currentPrompt = prompts[Math.floor(Math.random() * prompts.length)];
@@ -18,6 +26,23 @@ module.exports = {
     const countdownText = () => {
       return `**${counter}**...`;
     };
+
+    if (!args.length) {
+      let InitialEmbed = new Discord.MessageEmbed().setColor("#6a00ff").setDescription(`🕑 You will have ${t} seconds to finish this prompt.`);
+      message.channel.send(InitialEmbed).then(countdown());
+    } else {
+      switch (args[0]) {
+        case "top":
+          ShowStats();
+          break;
+        case "me":
+          ShowStats(message.author);
+          break;
+        default:
+          ShowStats(helper.FindUser(args[0], message));
+          break;
+      }
+    }
 
     async function countdown() {
       const msg = await message.channel.send(countdownText());
@@ -43,10 +68,6 @@ module.exports = {
       updateTime();
     }
 
-    let InitialEmbed = new Discord.MessageEmbed().setColor("#6a00ff").setDescription(`🕑 You will have ${t} seconds to finish this prompt.`);
-
-    message.channel.send(InitialEmbed).then(countdown());
-
     function StartGame() {
       collector = message.channel.createMessageCollector(filter, { time: t * 1000 });
       timeStarted = Date.now();
@@ -54,29 +75,96 @@ module.exports = {
       collector.on("collect", m => {
         AnswerLogic(m);
       });
-      collector.on("end", collected => {
-        //summary
-      });
+      collector.on("end", collected => {});
     }
 
-    function AnswerLogic(msg) {
+    async function AnswerLogic(msg) {
       if (finishedIDs.includes(msg.author.id)) return;
 
       let response = msg.content;
       let distance = levenshtein(currentPrompt, response);
       if (distance > currentPrompt.length / 25) return;
-      let elapsedTime = Date.now() - timeStarted;
-      let wpm = (currentPrompt.length / 4.5 / (elapsedTime / 1000)) * 60;
+      let elapsedTime = (Date.now() - timeStarted) / 1000;
+      let wpm = (currentPrompt.length / 4.5 / elapsedTime) * 60;
       finishedIDs.push(msg.author.id);
+      let pb;
+
+      await leaderboardSchema
+        .findOneAndUpdate(
+          {
+            _id: message.author.id,
+          },
+          {
+            _id: message.author.id,
+            name: message.author.username,
+            $max: {
+              wpm: wpm.toFixed(1),
+            },
+            $inc: {
+              gamesplayed: 1,
+              wpmsum: wpm,
+            },
+          },
+          {
+            upsert: true,
+            new: true,
+          }
+        )
+        .then(result => {
+          pb = result.wpm;
+        });
 
       const summaryEmbed = new Discord.MessageEmbed()
         .setColor("#80ff80")
         .setTitle(`${msg.author.username} finished the race!`)
         .addField("**Place**", `#${finishedIDs.length}`, true)
         .addField("**WPM**", wpm.toFixed(1), true)
-        .addField("**Errors**", distance, true);
+        .addField("**Errors**", distance, true)
+        .addField("**Best WPM**", pb, true);
 
       message.channel.send(summaryEmbed);
+    }
+
+    async function ShowStats(user) {
+      index = await leaderboardSchema.find().sort({ wpm: -1 });
+      var statEmbed;
+
+      if (!user) {
+        // top 10 leaderboard
+        let top = 10;
+        let j = Math.min(top, index.length);
+        let str = "";
+
+        for (i = 0; i < j; i++) {
+          str += `**#${i + 1}**: ${index[i].name} | **${index[i].wpm}** wpm\n`;
+        }
+
+        statEmbed = new Discord.MessageEmbed().setColor("#80ff80").addFields({ name: `Showing top ${j} typeracer scores`, value: str });
+      } else {
+        // specific user stats
+        const matchId = obj => obj._id == user.id;
+        let i = index.findIndex(matchId);
+        if (i == -1) i = user.id - 1;
+
+        if (!i) {
+          message.reply("invalid user!");
+          return;
+        }
+
+        if (!index[i]) {
+          message.reply("there are no stats for this user!");
+          return;
+        }
+
+        statEmbed = new Discord.MessageEmbed()
+          .setColor("#80ff80")
+          .setTitle(`Showing stats for ${index[i].name}`)
+          .addField("**Best WPM**", index[i].wpm, true)
+          .addField("**WPM Rank**", `#${i + 1}`, true)
+          .addField("**Average WPM**", (index[i].wpmsum / index[i].gamesplayed).toFixed(1));
+      }
+
+      message.channel.send(statEmbed);
     }
   },
 };

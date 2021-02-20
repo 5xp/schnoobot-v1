@@ -21,6 +21,13 @@ function FindUser(input, message) {
       user = message.guild.members.cache.get(message.mentions.users.first().id);
     }
   }
+
+  // last resort - get id from regex
+  if (!user) {
+    let id = input.replace(/[\\<>@#&!]/g, "");
+    user = message.client.users.cache.get(id) ? message.client.users.cache.get(id) : { id: id };
+  }
+
   return user;
 }
 

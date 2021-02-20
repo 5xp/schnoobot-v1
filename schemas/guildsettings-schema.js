@@ -5,8 +5,13 @@ const schemaObj = {
   required: false,
 };
 
+const requiredSchema = {
+  type: String,
+  required: true,
+};
+
 const settingsSchema = mongoose.Schema({
-  _id: schemaObj,
+  _id: requiredSchema,
   prefix: schemaObj,
 });
 
