@@ -1,4 +1,4 @@
-const helper = require("../helper.js");
+const helper = require("../utils/helper.js");
 module.exports = {
   name: "moveall",
   description: "move all members to another voice channel",

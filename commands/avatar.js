@@ -1,5 +1,5 @@
 const Discord = require("discord.js");
-const helper = require("../helper.js");
+const helper = require("../utils/helper.js");
 
 module.exports = {
   name: "avatar",

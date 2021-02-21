@@ -1,4 +1,4 @@
-const helper = require("../helper.js");
+const helper = require("../utils/helper.js");
 const owoify = require("owoify-js").default;
 module.exports = {
   name: "owo",

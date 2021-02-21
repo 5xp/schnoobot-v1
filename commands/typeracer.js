@@ -2,7 +2,7 @@ const fs = require("fs");
 const levenshtein = require("js-levenshtein");
 const Discord = require("discord.js");
 const leaderboardSchema = require("../schemas/typeracer-leaderboard-schema");
-const helper = require("../helper.js");
+const helper = require("../utils/helper.js");
 
 module.exports = {
   name: "typeracer",

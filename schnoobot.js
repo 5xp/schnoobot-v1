@@ -1,9 +1,9 @@
 require("dotenv").config();
 const Discord = require("discord.js");
-const mongo = require("./mongo.js");
+const mongo = require("./utils/mongo.js");
 const fs = require("fs");
 const colors = require("colors");
-const helper = require("./helper.js");
+const helper = require("./utils/helper.js");
 const settingsSchema = require("./schemas/guildsettings-schema");
 
 const client = new Discord.Client();

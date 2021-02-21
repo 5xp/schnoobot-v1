@@ -1,4 +1,4 @@
-const helper = require("../helper.js");
+const helper = require("../utils/helper.js");
 module.exports = {
   name: "setusername",
   description: "set the name of the bot",

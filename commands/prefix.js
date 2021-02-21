@@ -1,5 +1,5 @@
 const settingsSchema = require("../schemas/guildsettings-schema");
-const helper = require("../helper");
+const helper = require("../utils/helper");
 
 module.exports = {
   name: "prefix",
