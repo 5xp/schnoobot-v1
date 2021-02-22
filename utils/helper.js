@@ -62,6 +62,16 @@ function CheckPermissions(user, permission) {
   return (hasPermission = permission => user.hasPermission(permission));
 }
 
+TruncateDecimals = (number, decimals) => Math.trunc(number * Math.pow(10, decimals)) / Math.pow(10, decimals);
+
+RandomRange = (min, max) => Math.random() * (max - min) + min;
+
+function TimeToString(ms) {
+  minutes = Math.floor((ms / 60000) % 60);
+  hours = Math.floor(ms / 60000 / 60);
+  return `${hours} hours and ${minutes} minutes`;
+}
+
 module.exports = {
   FindUser,
   FindVC,
@@ -69,4 +79,7 @@ module.exports = {
   DownloadFile,
   sanitizeString,
   CheckPermissions,
+  TruncateDecimals,
+  RandomRange,
+  TimeToString,
 };

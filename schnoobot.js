@@ -5,6 +5,7 @@ const fs = require("fs");
 const colors = require("colors");
 const helper = require("./utils/helper.js");
 const settingsSchema = require("./schemas/guildsettings-schema");
+const { HandleCoin } = require("./utils/coin");
 
 const client = new Discord.Client();
 const globalprefix = process.env.PREFIX;
@@ -23,6 +24,7 @@ client.once("ready", async () => {
   await mongo().then(mongoose => {
     console.log(`Connected to mongo!`.green);
   });
+  HandleCoin(client);
 });
 
 //commands
