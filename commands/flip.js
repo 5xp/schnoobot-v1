@@ -1,6 +1,6 @@
 const { MessageEmbed } = require("discord.js");
 const { GetBalance, AwardPoints } = require("../utils/coin");
-const { TruncateDecimals } = require("../utils/helper");
+const numeral = require("numeral");
 
 module.exports = {
   name: "flip",
@@ -10,8 +10,8 @@ module.exports = {
   category: "Fun",
   async execute(message, args) {
     let input = args[0] ? args[0].toLowerCase() : null;
+    let wager = numeral(numeral(args[1]).format("0.00")).value();
 
-    let wager = TruncateDecimals(+args[1], 2);
     if (!wager || !input) {
       message.reply(`to play, use this command: ${this.usage}`);
       return;
@@ -46,13 +46,13 @@ module.exports = {
       let outcome = {};
       if (input == flip) {
         outcome["color"] = "#2bff00";
-        outcome["balance"] = TruncateDecimals(balance + wager, 2);
-        outcome["winnings"] = wager.toFixed(2);
+        outcome["balance"] = numeral(balance + wager).format("0,0.00");
+        outcome["winnings"] = numeral(wager).format("0,0.00");
         AwardPoints(message.author, wager);
       } else {
         outcome["color"] = "#ff0000";
-        outcome["balance"] = TruncateDecimals(balance - wager, 2);
-        outcome["winnings"] = (wager * -1).toFixed(2);
+        outcome["balance"] = numeral(balance - wager).format("0,0.00");
+        outcome["winnings"] = numeral(wager * -1).format("0,0.00");
         AwardPoints(message.author, -wager);
       }
       outcome["str"] = flip == 0 ? `The coin landed on **heads**!` : `The coin landed on **tails**!`;

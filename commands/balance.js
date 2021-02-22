@@ -1,5 +1,6 @@
 const { GetBalance } = require("../utils/coin");
 const { TruncateDecimals } = require("../utils/helper");
+const numeral = require("numeral");
 
 module.exports = {
   name: "balance",
@@ -8,7 +9,7 @@ module.exports = {
   alias: ["bal"],
   async execute(message, args) {
     GetBalance(message.author).then(balance => {
-      message.reply(`your balance is **${TruncateDecimals(balance, 2)}**!`);
+      message.reply(`your balance is **${numeral(balance).format("0,0.00")}**!`);
     });
   },
 };
