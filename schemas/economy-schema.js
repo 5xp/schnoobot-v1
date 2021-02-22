@@ -16,9 +16,16 @@ const numberSchema = {
   min: 0,
 };
 
+const decimalSchema = {
+  type: mongoose.Decimal128,
+  set: v => mongoose.Types.Decimal128.fromString(v.toFixed(2)),
+  required: false,
+  default: 0,
+};
+
 const economySchema = mongoose.Schema({
   _id: requiredSchema,
-  coins: numberSchema,
+  coins: decimalSchema,
   lastdaily: numberSchema,
 });
 

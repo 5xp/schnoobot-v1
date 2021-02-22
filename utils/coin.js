@@ -3,6 +3,7 @@ const COOLDOWN_TIME = 10;
 const cache = {};
 const economySchema = require("../schemas/economy-schema");
 const { randRange, TruncateDecimals, TimeToString } = require("../utils/helper");
+const numeral = require("numeral");
 
 module.exports = {
   async HandleCoin(client) {
@@ -93,7 +94,7 @@ async function GetDaily(user) {
       }
     );
 
-    return `You have received **${DAILY_REWARD}**! Your new balance is ${balance.toFixed(2)}`;
+    return `you have received **${DAILY_REWARD}**! Your new balance is **${numeral(balance).format("0,0.00")}**.`;
   } else {
     // time until next daily
     let time = lastDaily + 1000 * 60 * 60 * 24 - Date.now();
