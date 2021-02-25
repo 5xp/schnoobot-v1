@@ -9,7 +9,7 @@ module.exports = {
   alias: ["av", "pfp"],
   execute(message, args) {
     let avatarFormat = { format: "png", dynamic: true, size: 2048 };
-    desiredMember = helper.FindUser(helper.JoinArgs(args), message);
+    desiredMember = helper.FindMember(helper.JoinArgs(args), message);
 
     if (!desiredMember) {
       message.reply("couldn't find user!");

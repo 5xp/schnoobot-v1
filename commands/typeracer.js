@@ -39,7 +39,7 @@ module.exports = {
           ShowStats(message.author);
           break;
         default:
-          ShowStats(helper.FindUser(args[0], message));
+          ShowStats(helper.FindMember(args[0], message));
           break;
       }
     }

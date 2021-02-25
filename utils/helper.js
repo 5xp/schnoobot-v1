@@ -1,34 +1,34 @@
 const fs = require("fs");
 const request = require("request");
 
-function FindUser(input, message) {
+function FindMember(input, message) {
   let newInput = input.toLowerCase();
-  let user = message.guild.members.cache.get(newInput);
+  let member = message.guild.members.cache.get(newInput);
 
   // try search cache with displayname
-  if (!user) {
-    user = message.guild.members.cache.filter(u => u.displayName.toLowerCase().includes(newInput)).first();
+  if (!member) {
+    member = message.guild.members.cache.filter(u => u.displayName.toLowerCase().includes(newInput)).first();
   }
 
   // try search cache with username
-  if (!user) {
-    user = message.guild.members.cache.filter(u => u.user.username.toLowerCase().includes(newInput)).first();
+  if (!member) {
+    member = message.guild.members.cache.filter(u => u.user.username.toLowerCase().includes(newInput)).first();
   }
 
   // try mention
-  if (!user) {
+  if (!member) {
     if (message.mentions.users.size) {
-      user = message.guild.members.cache.get(message.mentions.users.first().id);
+      member = message.guild.members.cache.get(message.mentions.users.first().id);
     }
   }
 
   // last resort - get id from regex
-  if (!user) {
-    let id = input.replace(/[\\<>@#&!]/g, "");
-    user = message.client.users.cache.get(id) ? message.client.users.cache.get(id) : { id: id };
-  }
+  // if (!member) {
+  //   let id = input.replace(/[\\<>@#&!]/g, "");
+  //   member = message.client.users.cache.get(id) ? message.client.users.cache.get(id) : { id: id };
+  // }
 
-  return user;
+  return member;
 }
 
 function FindVC(input, message) {
@@ -73,7 +73,7 @@ function TimeToString(ms) {
 }
 
 module.exports = {
-  FindUser,
+  FindMember,
   FindVC,
   JoinArgs,
   DownloadFile,
