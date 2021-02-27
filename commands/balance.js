@@ -1,5 +1,5 @@
 const { GetBalance } = require("../utils/coin");
-const { TruncateDecimals } = require("../utils/helper");
+const { FindMember } = require("../utils/helper");
 const numeral = require("numeral");
 
 module.exports = {
@@ -8,8 +8,20 @@ module.exports = {
   category: "Fun",
   alias: ["bal"],
   async execute(message, args) {
-    GetBalance(message.author).then(balance => {
-      message.reply(`your balance is **${numeral(balance).format("0,0.00")}**!`);
-    });
+    if (!args.length) {
+      GetBalance(message.author).then(balance => {
+        message.reply(`your balance is **${numeral(balance).format("$0,0.00")}**!`);
+      });
+    } else {
+      let member = FindMember(args[0], message);
+      if (member) {
+        GetBalance(member).then(balance => {
+          message.reply(`${member.displayName}'s balance is **${numeral(balance).format("$0,0.00")}**!`);
+        });
+      } else {
+        message.reply("invalid user!");
+        return;
+      }
+    }
   },
 };
