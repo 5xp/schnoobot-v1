@@ -24,7 +24,7 @@ module.exports = {
     GetBalance(message.author).then(balance => {
       balance = +balance.toString();
       if (wager > balance) {
-        message.reply(`insufficient balance! Your balance is **${numeral(balance).format("0,0.00")}**.`);
+        message.reply(`insufficient balance! Your balance is **${numeral(balance).format("$0,0.00")}**.`);
         return;
       } else if (wager < 0.01) {
         message.reply(`you must bet more than 0!`);

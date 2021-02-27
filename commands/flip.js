@@ -20,7 +20,7 @@ module.exports = {
     GetBalance(message.author).then(balance => {
       balance = +balance.toString();
       if (wager > balance) {
-        message.reply(`insufficient balance! Your balance is **${numeral(balance).format("0,0.00")}**.`);
+        message.reply(`insufficient balance! Your balance is **${numeral(balance).format("$0,0.00")}**.`);
         return;
       } else if (wager < 0.01) {
         message.reply(`you must bet more than 0!`);
@@ -47,13 +47,13 @@ module.exports = {
       let outcome = {};
       if (input == flip) {
         outcome["color"] = "#2bff00";
-        outcome["balance"] = numeral(balance + wager).format("0,0.00");
-        outcome["winnings"] = numeral(wager).format("0,0.00");
+        outcome["balance"] = numeral(balance + wager).format("$0,0.00");
+        outcome["winnings"] = numeral(wager).format("$0,0.00");
         AwardPoints(message.author, wager);
       } else {
         outcome["color"] = "#ff0000";
-        outcome["balance"] = numeral(balance - wager).format("0,0.00");
-        outcome["winnings"] = numeral(wager * -1).format("0,0.00");
+        outcome["balance"] = numeral(balance - wager).format("$0,0.00");
+        outcome["winnings"] = numeral(wager * -1).format("$0,0.00");
         AwardPoints(message.author, -wager);
       }
       outcome["str"] = flip == 0 ? `The coin landed on **heads**!` : `The coin landed on **tails**!`;
@@ -62,7 +62,7 @@ module.exports = {
         .setColor(outcome.color)
         .setTitle("🪙 Coin Flip")
         .setDescription(outcome.str)
-        .addField("**Winnings**", outcome.winnings, true)
+        .addField("**Net Gain**", outcome.winnings, true)
         .addField("**Balance**", outcome.balance, true);
       message.channel.send(flipEmbed);
     }
