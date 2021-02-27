@@ -2,13 +2,13 @@ const msgCooldowns = new Set();
 const COOLDOWN_TIME = 10;
 const cache = {};
 const economySchema = require("../schemas/economy-schema");
-const { randRange, TruncateDecimals, TimeToString } = require("../utils/helper");
+const { RandomRange, TruncateDecimals, TimeToString } = require("../utils/helper");
 const numeral = require("numeral");
 
 module.exports = {
   async HandleCoin(client) {
     client.on("message", message => {
-      if (/^[a-z]/i.test(message.content)) {
+      if (/^[a-z]/i.test(message.content) && message.content.split(" ").length > 1) {
         ActivityPoints(message.author);
       }
     });
@@ -61,8 +61,8 @@ async function GetBalance(user) {
   return balance;
 }
 
-const DAILY_REWARD = 1000;
 async function GetDaily(user) {
+  const dailyreward = 1000;
   let lastDaily = cache[user.id];
 
   // is user in cache?
@@ -75,14 +75,9 @@ async function GetDaily(user) {
   }
 
   // has 24 hours passed?
-  if (lastDaily - Date.now() > 1000 * 60 * 60 * 24 || !lastDaily) {
+  if (Date.now() - lastDaily > 1000 * 60 * 60 * 24 || !lastDaily) {
     cache[user.id] = lastDaily = Date.now();
-    let balance;
     // TODO: daily reward * tier
-
-    AwardPoints(user, DAILY_REWARD).then(result => {
-      balance = result.coins;
-    });
 
     await economySchema.findByIdAndUpdate(
       user.id,
@@ -94,7 +89,9 @@ async function GetDaily(user) {
       }
     );
 
-    return `you have received **${DAILY_REWARD}**! Your new balance is **${numeral(balance).format("0,0.00")}**.`;
+    return AwardPoints(user, dailyreward).then(result => {
+      return `you have received **${numeral(dailyreward).format("0,0.00")}**! Your new balance is **${numeral(result.coins).format("0,0.00")}**.`;
+    });
   } else {
     // time until next daily
     let time = lastDaily + 1000 * 60 * 60 * 24 - Date.now();
