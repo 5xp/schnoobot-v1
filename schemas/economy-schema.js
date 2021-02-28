@@ -23,10 +23,17 @@ const decimalSchema = {
   default: 0,
 };
 
+const integerSchema = {
+  type: Number,
+  get: v => Math.round(v),
+  set: v => Math.round(v),
+};
+
 const economySchema = mongoose.Schema({
   _id: requiredSchema,
   coins: decimalSchema,
   lastdaily: numberSchema,
+  dailystreak: integerSchema,
 });
 
 module.exports = mongoose.model("economy", economySchema);

@@ -15,7 +15,9 @@ module.exports = {
   },
   AwardPoints,
   GetBalance,
+  GetUserData,
   GetDaily,
+  dailyIn,
 };
 
 async function ActivityPoints(user, time = null) {
@@ -61,6 +63,11 @@ async function GetBalance(user) {
   return balance;
 }
 
+async function GetUserData(user) {
+  const result = await economySchema.findById(user.id);
+  return typeof result !== "undefined" ? result : 0;
+}
+
 async function GetDaily(user) {
   const dailyreward = 1000;
   let lastDaily = cache[user.id];
@@ -75,26 +82,50 @@ async function GetDaily(user) {
   }
 
   // has 24 hours passed?
-  if (Date.now() - lastDaily > 1000 * 60 * 60 * 24 || !lastDaily) {
-    cache[user.id] = lastDaily = Date.now();
-    // TODO: daily reward * tier
+  dailyAvailable = dailyIn(lastDaily);
+  if (dailyAvailable === true) {
+    // did less than 28 hours pass?
+    if (Date.now() - lastDaily < 1000 * 60 * 60 * 28) {
+      // increment streak
+      let result = await economySchema.findByIdAndUpdate(
+        user.id,
+        {
+          lastdaily: Date.now(),
+          $inc: {
+            dailystreak: 1,
+          },
+        },
+        {
+          upsert: true,
+          new: true,
+        }
+      );
+      dailystreak = result.dailystreak;
+    } else {
+      // reset streak
+      let result = await economySchema.findByIdAndUpdate(
+        user.id,
+        {
+          lastdaily: Date.now(),
+          dailystreak: 1,
+        },
+        {
+          upsert: true,
+          new: true,
+        }
+      );
+      dailystreak = result.dailystreak;
+    }
 
-    await economySchema.findByIdAndUpdate(
-      user.id,
-      {
-        lastdaily: Date.now(),
-      },
-      {
-        upsert: true,
-      }
-    );
-
-    return AwardPoints(user, dailyreward).then(result => {
-      return `you have received **${numeral(dailyreward).format("0,0.00")}**! Your new balance is **${numeral(result.coins).format("0,0.00")}**.`;
-    });
+    let result = await AwardPoints(user, dailyreward * dailystreak);
+    return { awarded: true, reward: numeral(dailyreward * dailystreak).format("$0,0.00"), new_balance: numeral(result.coins).format("$0,0.00"), streak: dailystreak };
   } else {
     // time until next daily
-    let time = lastDaily + 1000 * 60 * 60 * 24 - Date.now();
-    return `you have already claimed your daily reward! Come back in **${TimeToString(time)}**!`;
+    return { awarded: false, dailyAvailable: dailyAvailable, new_balance: numeral(+result.coins.toString()).format("$0,0.00") };
   }
+}
+
+function dailyIn(lastdaily) {
+  let time = lastdaily + 1000 * 60 * 60 * 24 - Date.now();
+  return Date.now() - lastdaily > 1000 * 60 * 60 * 24 || !time || !lastdaily ? true : TimeToString(time);
 }

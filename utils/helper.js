@@ -69,7 +69,9 @@ RandomRange = (min, max) => Math.random() * (max - min) + min;
 function TimeToString(ms) {
   minutes = Math.floor((ms / 60000) % 60);
   hours = Math.floor(ms / 60000 / 60);
-  return `${hours} hours and ${minutes} minutes`;
+  hours = hours ? `${hours} hours and ` : "";
+  minutes = minutes ? `${minutes} minutes` : "";
+  return `${hours}${minutes}`;
 }
 
 module.exports = {
