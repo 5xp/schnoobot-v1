@@ -14,7 +14,6 @@ module.exports = {
     });
   },
   AwardPoints,
-  GetBalance,
   GetUserData,
   GetDaily,
   dailyIn,
@@ -55,12 +54,6 @@ async function AwardPoints(user, coins) {
       new: true,
     }
   );
-}
-
-async function GetBalance(user) {
-  const result = await economySchema.findById(user.id);
-  let balance = result ? result.coins : 0;
-  return balance;
 }
 
 async function GetUserData(user) {

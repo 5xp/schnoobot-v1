@@ -1,64 +1,56 @@
 const { MessageEmbed } = require("discord.js");
-const { GetBalance, AwardPoints } = require("../utils/coin");
+const { AwardPoints, GetUserData } = require("../utils/coin");
 const numeral = require("numeral");
 const INPUT_TYPES = ["red", "black", "even", "odd", "low", "high", "number"];
 const DIGIT = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
 
 module.exports = {
   name: "wheel",
-  description: "roulette wheel\nbet types: `red`, `black`, `even`, `odd`, `high`, `low`, `green`, `<number>`",
+  description: "roulette wheel",
   alias: ["roulette"],
   category: "Fun",
-  usage: `\`${process.env.PREFIX}wheel <bet type> <wager>\``,
+  usage: `\`${process.env.PREFIX}wheel <bet type> <wager>\`\n
+  bet types: \`red\`, \`black\`, \`even\`, \`odd\`, \`high\`, \`low\`, \`green\`, \`<number>\``,
   async execute(message, args) {
     let input = args[0] ? args[0].toLowerCase() : null;
     input = input == "green" ? 0 : input;
     let type = isNaN(+input) ? input : "number";
 
     let wager = numeral(numeral(args[1]).format("0.00")).value();
-    if (!INPUT_TYPES.includes(type)) {
-      message.reply("input a valid bet type!");
-      return;
+
+    if (!INPUT_TYPES.includes(type) || (type == "number" && (input > 36 || input < 0 || !Number.isInteger(+input)))) {
+      return message.reply("input a valid bet type!");
     }
 
-    GetBalance(message.author).then(balance => {
-      balance = +balance.toString();
-      if (wager > balance) {
-        message.reply(`insufficient balance! Your balance is **${numeral(balance).format("$0,0.00")}**.`);
-        return;
-      } else if (wager < 0.01) {
-        message.reply(`you must bet more than 0!`);
-        return;
-      }
-      StartGame(balance);
-    });
+    const data = await GetUserData(message.author);
+    const balance = +data.coins.toString();
 
-    function StartGame(balance) {
-      const roll = new Roll(input);
-      let outcome = {};
-      if (roll[type][0]) {
-        outcome["color"] = "#2bff00";
-        outcome["balance"] = numeral(balance + wager * roll[type][1]).format("$0,0.00");
-        outcome["winnings"] = numeral(wager * roll[type][1]).format("$0,0.00");
-        AwardPoints(message.author, wager * roll[type][1]);
-      } else {
-        outcome["color"] = "#ff0000";
-        outcome["balance"] = numeral(balance - wager).format("$0,0.00");
-        outcome["winnings"] = numeral(wager * -1).format("$0,0.00");
-        AwardPoints(message.author, -wager);
-      }
-      let clr = roll.color !== "red" && roll.color !== "black" ? "🟢" : roll.color == "red" ? "🔴" : "⚫";
-      let digits = roll.num < 10 ? `:${DIGIT[+roll.num.toString()[0]]}:` : `:${DIGIT[+roll.num.toString()[0]]}: :${DIGIT[+roll.num.toString()[1]]}:`;
-      outcome["str"] = `${clr} ${digits}`;
-
-      const wheelEmbed = new MessageEmbed()
-        .setColor(outcome.color)
-        .setTitle("Roulette Wheel")
-        .setDescription(outcome.str)
-        .addField("**Net Gain**", outcome.winnings, true)
-        .addField("**Balance**", outcome.balance, true);
-      message.channel.send(wheelEmbed);
+    if (wager > balance) {
+      return message.reply(`insufficient balance! Your balance is **${numeral(balance).format("$0,0.00")}**.`);
+    } else if (wager < 0.01) {
+      return message.reply(`you must bet more than $0!`);
     }
+
+    const roll = new Roll(input);
+    const wheelEmbed = new MessageEmbed().setTitle("💸Roulette Wheel");
+
+    if (roll[type][0]) {
+      wheelEmbed.setColor("#2bff00");
+      wheelEmbed.addField("**Net Gain**", numeral(wager * roll[type][1]).format("$0,0.00"), true);
+      wheelEmbed.addField("**Balance**", numeral(balance + wager * roll[type][1]).format("$0,0.00"), true);
+      AwardPoints(message.author, wager * roll[type][1]);
+    } else {
+      wheelEmbed.setColor("#ff0000");
+      wheelEmbed.addField("**Net Gain**", numeral(-wager).format("$0,0.00"), true);
+      wheelEmbed.addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true);
+      AwardPoints(message.author, -wager);
+    }
+    const clr = roll.color !== "red" && roll.color !== "black" ? "🟢" : roll.color == "red" ? "🔴" : "⚫";
+    const digits = roll.num < 10 ? `:${DIGIT[+roll.num.toString()[0]]}:` : `:${DIGIT[+roll.num.toString()[0]]}: :${DIGIT[+roll.num.toString()[1]]}:`;
+    const str = `${clr} ${digits}`;
+
+    wheelEmbed.setDescription(str);
+    message.channel.send(wheelEmbed);
   },
 };
 

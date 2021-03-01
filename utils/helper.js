@@ -17,16 +17,10 @@ function FindMember(input, message) {
 
   // try mention
   if (!member) {
-    if (message.mentions.users.size) {
-      member = message.guild.members.cache.get(message.mentions.users.first().id);
-    }
+    const matches = input.match(/^<@!?(\d+)>$/);
+    if (!matches) return;
+    member = message.guild.members.cache.get(matches[1]);
   }
-
-  // last resort - get id from regex
-  // if (!member) {
-  //   let id = input.replace(/[\\<>@#&!]/g, "");
-  //   member = message.client.users.cache.get(id) ? message.client.users.cache.get(id) : { id: id };
-  // }
 
   return member;
 }
@@ -69,6 +63,8 @@ RandomRange = (min, max) => Math.random() * (max - min) + min;
 function TimeToString(ms) {
   minutes = Math.floor((ms / 60000) % 60);
   hours = Math.floor(ms / 60000 / 60);
+  console.log(hours);
+  console.log(minutes);
   hours = hours ? `${hours} hours and ` : "";
   minutes = minutes ? `${minutes} minutes` : "";
   return `${hours}${minutes}`;

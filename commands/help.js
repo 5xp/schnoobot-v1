@@ -4,7 +4,7 @@ module.exports = {
   name: "help",
   description: "help",
   alias: ["h"],
-  usage: `\`${process.env.PREFIX}help <optional command>\``,
+  usage: `\`${process.env.PREFIX}help <command?>\``,
   category: "Utility",
   async execute(message, args) {
     let client = message.client;

@@ -7,15 +7,16 @@ module.exports = {
   name: "balance",
   description: "get your balance",
   category: "Fun",
+  usage: `\`${process.env.PREFIX}balance <@member?>\``,
   alias: ["bal"],
   async execute(message, args) {
     let member = !args.length ? message.member : FindMember(args[0], message);
 
-    let data = await GetUserData(member);
-    if (!member || typeof data == "undefined") {
-      message.reply("invalid user!");
-      return;
+    if (!member) {
+      return message.reply(`To use this command: \`${this.usage}\``);
     }
+
+    let data = await GetUserData(member);
 
     let balance = data && data.coins ? +data.coins.toString() : 0;
     let lastdaily = data && data.lastdaily ? data.lastdaily : undefined;
