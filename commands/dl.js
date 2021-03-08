@@ -1,7 +1,14 @@
 const Discord = require("discord.js");
 const helper = require("../helper.js");
-const ytdl = require("youtube-dl");
+const youtubedl = require("youtube-dl");
 const fs = require("fs");
+const { getVideoDurationInSeconds } = require("get-video-duration");
+const { getAudioDurationInSeconds } = require("get-audio-duration");
+const ffmpeg = require("ffmpeg");
+
+const format1 = "--format=bestvideo[ext=mp4][filesize<8M]+bestaudio[ext=m4a]";
+const format2 = "--format=worstvideo[ext=mp4][filesize>8M]+bestaudio[ext=m4a]";
+const format3 = "--format=bestvideo[ext=mp4][filesize<200M]+bestaudio[ext=m4a]";
 
 module.exports = {
   name: "dl",
@@ -15,60 +22,73 @@ module.exports = {
       return;
     }
 
-    var ext;
-    const url = args[0].replace(/[<>]/g, "");
+    var ext, path;
+    const url = args.shift().replace(/[<>]/g, "");
     const dir = `./temp`;
 
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir);
     }
 
-    var GetPath = () => {
-      let num = message.id;
-      return `${dir}/output${num}.${ext}`;
-    };
+    const msg = await message.channel.send("Attempting to download...").then(console.log(`${message.author.username} is attempting to download a video from ${url}`.yellow));
 
-    options = args.length > 1 ? helper.JoinArgs(args.slice(1)).split(", ") : ["--dump-json", "-f best"];
+    youtubedl.exec(url, ["-o", `/temp/${message.id}.%(ext)s`, `${format1}/${format2}/${format3}/best[ext=mp4][filesize<200M]/best`], {}, async (err, output) => {
+      if (err) {
+        const err_str = err.stderr.match(/^ERROR.*$/gm);
+        return message.reply(err_str.join("\n"));
+      }
 
-    const msg = await message.channel.send("Getting file information...").then(console.log(`${message.author.username} is attempting to download a video from ${url}`.yellow));
+      console.log(output.join("\n"));
+      let path = `./temp/${message.id}`;
 
-    ytdl.getInfo(url, options, function (err, info) {
-      if (err) throw err;
-      ext = info.ext;
-      path = GetPath();
-      const video = ytdl(url, options)
-        // check for error before we download file
-        .on("error", function error(error) {
-          message.reply(error.stderr);
-          console.log(error);
-        })
-        .on("info", function (info) {
-          msg.edit("Downloading file...");
-        })
-        .pipe(fs.createWriteStream(path))
+      // probably a better way to get the file extension
+      if (fs.existsSync(`${path}.mp4`)) var ext = "mp4";
+      else if (fs.existsSync(`${path}.mp3`)) var ext = "mp3";
+      path = path + `.${ext}`;
+      const originalpath = path;
 
-        // wait to send after it finishes downloading
-        .on("close", function () {
-          let sendAttachment = new Discord.MessageAttachment(path);
-          message.channel
-            .send(sendAttachment)
-            .then(msg.edit("Uploading file..."))
-            // delete file after it finishes sending
-            .then(() => {
-              msg.delete();
-              fs.unlink(path, err => {
-                if (err) throw err;
-              });
-            })
-            .catch(error => {
-              console.error(error);
-              message.reply(error.message);
-            });
+      const stats = fs.statSync(path);
+      const megabytes = stats.size / (1024 * 1024);
+
+      if (megabytes > 8) {
+        console.log(`Filesize is greater than 8 megabytes! (${megabytes.toFixed(2)}M)`.red);
+        msg.edit("File is too large, compressing...");
+        await compress(path, ext);
+        path = path.slice(0, -4) + `_new.${ext}`;
+      }
+
+      msg.edit("Sending...");
+      const attachment = new Discord.MessageAttachment(path);
+      await message.channel.send(attachment).catch(error => {
+        message.reply(error.message);
+      });
+      msg.delete();
+      fs.unlink(path, error => {
+        if (error) throw error;
+      });
+      if (path !== originalpath)
+        fs.unlink(originalpath, error => {
+          if (error) throw error;
         });
-    });
-
-    process.on("unhandledRejection", error => {
-      message.reply(error.stderr);
     });
   },
 };
+
+const getDuration = async (path, ext) => {
+  switch (ext) {
+    case "mp4":
+      return await getVideoDurationInSeconds(path);
+    case "mp3":
+      return await getAudioDurationInSeconds(path);
+  }
+};
+
+async function compress(path, ext) {
+  const duration = (await getDuration(path, ext)) * 1.5;
+  const bitrate = (8 * 8196) / duration - 128;
+
+  var process = new ffmpeg(path);
+  video = await process;
+  video.addCommand("-b:v", bitrate + "k");
+  return video.save(path.slice(0, -4) + `_new.${ext}`);
+}
