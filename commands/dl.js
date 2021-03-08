@@ -34,6 +34,7 @@ module.exports = {
 
     youtubedl.exec(url, ["-o", `/temp/${message.id}.%(ext)s`, `${format1}/${format2}/${format3}/best[ext=mp4][filesize<200M]/best`], {}, async (err, output) => {
       if (err) {
+        console.log(err);
         const err_str = err.stderr.match(/^ERROR.*$/gm);
         return message.reply(err_str.join("\n"));
       }
