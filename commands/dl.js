@@ -22,9 +22,8 @@ module.exports = {
       return;
     }
 
-    var ext, path;
     const url = args.shift().replace(/[<>]/g, "");
-    const dir = `./temp`;
+    const dir = `${process.cwd()}/temp`;
 
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir);
@@ -32,7 +31,7 @@ module.exports = {
 
     const msg = await message.channel.send("Attempting to download...").then(console.log(`${message.author.username} is attempting to download a video from ${url}`.yellow));
 
-    youtubedl.exec(url, ["-o", `/temp/${message.id}.%(ext)s`, `${format1}/${format2}/${format3}/best[ext=mp4][filesize<200M]/best`], {}, async (err, output) => {
+    youtubedl.exec(url, ["-o", `${dir}/${message.id}.%(ext)s`, `${format1}/${format2}/${format3}/best[ext=mp4][filesize<200M]/best`], {}, async (err, output) => {
       if (err) {
         console.log(err);
         const err_str = err.stderr.match(/^ERROR.*$/gm);
@@ -40,12 +39,13 @@ module.exports = {
       }
 
       console.log(output.join("\n"));
-      let path = `./temp/${message.id}`;
+
+      let path = `${dir}/${message.id}`;
 
       // probably a better way to get the file extension
       if (fs.existsSync(`${path}.mp4`)) var ext = "mp4";
       else if (fs.existsSync(`${path}.mp3`)) var ext = "mp3";
-      path = path + `.${ext}`;
+      path = `${path}.${ext}`;
       const originalpath = path;
 
       const stats = fs.statSync(path);
