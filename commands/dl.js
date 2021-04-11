@@ -31,7 +31,7 @@ module.exports = {
 
     const msg = await message.channel.send("Attempting to download...").then(console.log(`${message.author.username} is attempting to download a video from ${url}`.yellow));
 
-    youtubedl.exec(url, ["-o", `${dir}/${message.id}.%(ext)s`, `${format1}/${format2}/${format3}/best[ext=mp4][filesize<200M]/best`], {}, async (err, output) => {
+    youtubedl.exec(url, ["-o", `${dir}/${message.id}.%(ext)s`, `${format1}/${format2}/${format3}/best[ext=mp4][filesize<200M]/bestvideo+bestaudio/best`], {}, async (err, output) => {
       if (err) {
         console.log(err);
         const err_str = err.stderr.match(/^ERROR.*$/gm);
