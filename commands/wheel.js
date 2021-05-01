@@ -16,14 +16,15 @@ module.exports = {
     input = input == "green" ? 0 : input;
     let type = isNaN(+input) ? input : "number";
 
-    let wager = numeral(numeral(args[1]).format("0.00")).value();
+    let wager = args[1].toLowerCase() === "all" ? "all" : numeral(numeral(args[1]).format("0.00")).value();
 
     if (!INPUT_TYPES.includes(type) || (type == "number" && (input > 36 || input < 0 || !Number.isInteger(+input)))) {
       return message.reply("input a valid bet type!");
     }
 
     const data = await GetUserData(message.author);
-    const balance = +data.coins.toString();
+    const balance = data === null ? 0 : +data.coins.toString();
+    if (wager === "all") wager = balance;
 
     if (wager > balance) {
       return message.reply(`insufficient balance! Your balance is **${numeral(balance).format("$0,0.00")}**.`);
@@ -56,7 +57,7 @@ module.exports = {
 
 class Roll {
   constructor(input) {
-    this.num = Math.round(Math.random() * 36);
+    this.num = Math.floor(Math.random() * 37);
     this.input = input;
   }
   get color() {

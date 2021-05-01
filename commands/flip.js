@@ -11,7 +11,7 @@ module.exports = {
   async execute(message, args) {
     let input = args[0] ? args[0].toLowerCase() : null;
 
-    let wager = numeral(numeral(args[1]).format("0.00")).value();
+    let wager = args[1].toLowerCase() === "all" ? "all" : numeral(numeral(args[1]).format("0.00")).value();
 
     if (!input) {
       message.reply(`to play, use this command: ${this.usage}`);
@@ -31,7 +31,8 @@ module.exports = {
     }
 
     let data = await GetUserData(message.author);
-    let balance = +data.coins.toString();
+    const balance = data === null ? 0 : +data.coins.toString();
+    if (wager === "all") wager = balance;
 
     if (wager > balance) {
       return message.reply(`insufficient balance! Your balance is **${numeral(balance).format("$0,0.00")}**.`);

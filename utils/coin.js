@@ -1,6 +1,6 @@
 const msgCooldowns = new Set();
 const COOLDOWN_TIME = 10;
-const cache = {};
+// const cache = {};
 const economySchema = require("../schemas/economy-schema");
 const { RandomRange, TruncateDecimals, TimeToString } = require("../utils/helper");
 const numeral = require("numeral");
@@ -58,21 +58,21 @@ async function AwardPoints(user, coins) {
 
 async function GetUserData(user) {
   const result = await economySchema.findById(user.id);
-  return typeof result !== "undefined" ? result : 0;
+  return result;
 }
 
 async function GetDaily(user) {
   const dailyreward = 1000;
-  let lastDaily = cache[user.id];
+  // let lastDaily;
+  // let data, dailystreak;
 
-  // is user in cache?
-  if (!lastDaily) {
-    result = await economySchema.findById(user.id);
-    // has user ever claimed daily?
-    if (result.lastdaily) {
-      cache[user.id] = lastDaily = result.lastdaily;
-    }
+  let data = await GetUserData(user);
+  // has user ever claimed daily?
+  if (data && data.lastdaily) {
+    var lastDaily = data.lastdaily;
   }
+  // if (!lastDaily) {
+  // }
 
   // has 24 hours passed?
   dailyAvailable = dailyIn(lastDaily);
@@ -114,7 +114,7 @@ async function GetDaily(user) {
     return { awarded: true, reward: numeral(dailyreward * dailystreak).format("$0,0.00"), new_balance: numeral(result.coins).format("$0,0.00"), streak: dailystreak };
   } else {
     // time until next daily
-    return { awarded: false, dailyAvailable: dailyAvailable, new_balance: numeral(+result.coins.toString()).format("$0,0.00") };
+    return { awarded: false, dailyAvailable: dailyAvailable, new_balance: numeral(+data.coins.toString()).format("$0,0.00") };
   }
 }
 

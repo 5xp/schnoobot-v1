@@ -61,13 +61,11 @@ TruncateDecimals = (number, decimals) => Math.trunc(number * Math.pow(10, decima
 RandomRange = (min, max) => Math.random() * (max - min) + min;
 
 function TimeToString(ms) {
-  minutes = Math.floor((ms / 60000) % 60);
   hours = Math.floor(ms / 60000 / 60);
-  console.log(hours);
-  console.log(minutes);
-  hours = hours ? `${hours} hours and ` : "";
-  minutes = minutes ? `${minutes} minutes` : "";
-  return `${hours}${minutes}`;
+  minutes = Math.floor((ms / 60000) % 60);
+  if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+  else if (hours > 0 && minutes == 0) return `${hours}h`;
+  else return `${minutes}m`;
 }
 
 module.exports = {

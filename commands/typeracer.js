@@ -11,8 +11,7 @@ module.exports = {
   usage: `\`${process.env.PREFIX}typeracer\`\n
   \`${process.env.PREFIX}typeracer top\`\n
   \`${process.env.PREFIX}typeracer me\`\n
-  \`${process.env.PREFIX}typeracer <@user>\`\n
-  \`${process.env.PREFIX}typeracer <rank>\``,
+  \`${process.env.PREFIX}typeracer <@user>\`\n`,
   alias: ["type", "t"],
   execute(message, args) {
     const prompts = JSON.parse(fs.readFileSync("./prompts.json"));
@@ -126,7 +125,7 @@ module.exports = {
     }
 
     async function ShowStats(user) {
-      index = await leaderboardSchema.find().sort({ wpm: -1 });
+      const index = await leaderboardSchema.find().sort({ wpm: -1 });
       var statEmbed;
 
       if (!user) {
@@ -136,7 +135,7 @@ module.exports = {
         let str = "";
 
         for (i = 0; i < j; i++) {
-          str += `**#${i + 1}**: ${index[i].name} | **${index[i].wpm}** wpm\n`;
+          str += `**#${i + 1}**: <@${index[i]._id}> | **${index[i].wpm}** wpm\n`;
         }
 
         statEmbed = new Discord.MessageEmbed().setColor("#80ff80").addFields({ name: `Showing top ${j} typeracer scores`, value: str });
@@ -144,12 +143,6 @@ module.exports = {
         // specific user stats
         const matchId = obj => obj._id == user.id;
         let i = index.findIndex(matchId);
-        if (i == -1) i = user.id - 1;
-
-        if (!i) {
-          message.reply("invalid user!");
-          return;
-        }
 
         if (!index[i]) {
           message.reply("there are no stats for this user!");
