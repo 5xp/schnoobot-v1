@@ -4,11 +4,11 @@ module.exports = {
   name: "help",
   description: "help",
   alias: ["h"],
-  usage: `\`${process.env.PREFIX}help <optional command>\``,
+  usage: `\`${process.env.PREFIX}help <command?>\``,
   category: "Utility",
   async execute(message, args) {
     let client = message.client;
-    let cmdlist = { Utility: [], Fun: [], "Bot owner": [] };
+    let cmdlist = { Utility: [], Fun: [], "Guild settings": [], "Bot owner": [] };
     let currentPage = 0;
 
     for (c of client.commands) {
@@ -31,7 +31,7 @@ module.exports = {
       collector.on("collect", (reaction, user) => {
         if (reaction.emoji.name == "▶") {
           currentPage++;
-          currentPage = Math.min(currentPage, 2);
+          currentPage = Math.min(currentPage, Object.keys(cmdlist).length - 1);
           msg.edit(GetEmbedGeneric(currentPage));
         } else {
           currentPage--;
@@ -55,7 +55,7 @@ module.exports = {
       return helpEmbed
         .setColor("#f03e1f")
         .addFields({ name: `Showing ${category.toLowerCase()} commands`, value: str })
-        .setFooter(`Page ${page + 1}/3`);
+        .setFooter(`Page ${page + 1}/${Object.keys(cmdlist).length}`);
     }
 
     function GetEmbedSpecific(cmd) {

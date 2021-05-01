@@ -16,6 +16,9 @@
     "get-audio-duration": "^2.0.3",
     "get-video-duration": "^3.0.2",
     "js-levenshtein": "^1.1.6",
+    "mongoose": "^5.11.16",
+    "numeral": "^2.0.6",
+    "owoify-js": "^1.0.7",
     "request": "^2.88.2",
     "youtube-dl": "^3.1.0"
   }

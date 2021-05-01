@@ -1,27 +1,28 @@
 const fs = require("fs");
 const request = require("request");
 
-function FindUser(input, message) {
+function FindMember(input, message) {
   let newInput = input.toLowerCase();
-  let user = message.guild.members.cache.get(newInput);
+  let member = message.guild.members.cache.get(newInput);
 
   // try search cache with displayname
-  if (!user) {
-    user = message.guild.members.cache.filter(u => u.displayName.toLowerCase().includes(newInput)).first();
+  if (!member) {
+    member = message.guild.members.cache.filter(u => u.displayName.toLowerCase().includes(newInput)).first();
   }
 
   // try search cache with username
-  if (!user) {
-    user = message.guild.members.cache.filter(u => u.user.username.toLowerCase().includes(newInput)).first();
+  if (!member) {
+    member = message.guild.members.cache.filter(u => u.user.username.toLowerCase().includes(newInput)).first();
   }
 
   // try mention
-  if (!user) {
-    if (message.mentions.users.size) {
-      user = message.guild.members.cache.get(message.mentions.users.first().id);
-    }
+  if (!member) {
+    const matches = input.match(/^<@!?(\d+)>$/);
+    if (!matches) return;
+    member = message.guild.members.cache.get(matches[1]);
   }
-  return user;
+
+  return member;
 }
 
 function FindVC(input, message) {
@@ -55,11 +56,26 @@ function CheckPermissions(user, permission) {
   return (hasPermission = permission => user.hasPermission(permission));
 }
 
+TruncateDecimals = (number, decimals) => Math.trunc(number * Math.pow(10, decimals)) / Math.pow(10, decimals);
+
+RandomRange = (min, max) => Math.random() * (max - min) + min;
+
+function TimeToString(ms) {
+  hours = Math.floor(ms / 60000 / 60);
+  minutes = Math.floor((ms / 60000) % 60);
+  if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+  else if (hours > 0 && minutes == 0) return `${hours}h`;
+  else return `${minutes}m`;
+}
+
 module.exports = {
-  FindUser,
+  FindMember,
   FindVC,
   JoinArgs,
   DownloadFile,
   sanitizeString,
   CheckPermissions,
+  TruncateDecimals,
+  RandomRange,
+  TimeToString,
 };

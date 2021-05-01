@@ -1,11 +1,14 @@
+require("dotenv").config();
 const Discord = require("discord.js");
+const mongo = require("./utils/mongo.js");
 const fs = require("fs");
 const colors = require("colors");
-const helper = require("./helper.js");
-require("dotenv").config();
+const helper = require("./utils/helper.js");
+const settingsSchema = require("./schemas/guildsettings-schema");
+const { HandleCoin } = require("./utils/coin");
 
 const client = new Discord.Client();
-const prefix = process.env.PREFIX;
+const globalprefix = process.env.PREFIX;
 
 client.commands = new Discord.Collection();
 
@@ -16,12 +19,16 @@ for (const file of commandFiles) {
   client.commands.set(command.name, command);
 }
 
-client.once("ready", () => {
+client.once("ready", async () => {
   console.log(`Schnoobot is online!`.blue);
+  await mongo().then(mongoose => {
+    console.log(`Connected to mongo!`.green);
+  });
+  HandleCoin(client);
 });
 
 //commands
-client.on("message", message => {
+client.on("message", async message => {
   let msg = message.content.toLowerCase();
 
   if (msg.includes("wbl") && !message.author.bot) {
@@ -29,24 +36,34 @@ client.on("message", message => {
     message.channel.send("wbl");
   }
 
-  if (!message.content.startsWith(prefix) || message.author.bot || !message.guild) return;
+  // get guild prefix if it exists
+  client.commands
+    .get("prefix")
+    .checkCache(message)
+    .then(prefix => {
+      if ((!message.content.startsWith(prefix) && !(message.mentions.users.size && message.mentions.users.first().id == client.user.id)) || message.author.bot || !message.guild) return;
 
-  const args = message.content.slice(prefix.length).split(/ +/);
-  const command = args.shift().toLowerCase();
+      // if user mentions client
+      const args =
+        message.mentions.users.size && message.mentions.users.first().id == client.user.id
+          ? message.content.replace(`<@!${message.mentions.users.first().id}> `, "").split(/ +/)
+          : message.content.slice(prefix.length).split(/ +/);
+      const command = args.shift().toLowerCase();
 
-  for (c of client.commands) {
-    if (command == c[0] || (c[1].alias !== undefined && Object.values(c[1].alias).includes(command))) {
-      if (c[1].disabled !== undefined && c[1].disabled == true) {
-        message.reply("that command is disabled!");
-      } else {
-        if (c[1].required_perms == undefined || c[1].required_perms.some(helper.CheckPermissions(message.member, c[1].required_perms))) {
-          client.commands.get(c[0]).execute(message, args);
-        } else {
-          message.reply(`missing permission: \`${c[1].required_perms.join(", ")}\``);
+      for (c of client.commands) {
+        if (command == c[0] || (c[1].alias !== undefined && Object.values(c[1].alias).includes(command))) {
+          if (c[1].disabled !== undefined && c[1].disabled == true) {
+            message.reply("that command is disabled!");
+          } else {
+            if (c[1].required_perms == undefined || c[1].required_perms.some(helper.CheckPermissions(message.member, c[1].required_perms))) {
+              client.commands.get(c[0]).execute(message, args);
+            } else {
+              message.reply(`missing permission: \`${c[1].required_perms.join(", ")}\``);
+            }
+          }
         }
       }
-    }
-  }
+    });
 });
 
 client.login(process.env.TOKEN);
