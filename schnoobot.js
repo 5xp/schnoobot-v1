@@ -36,6 +36,11 @@ client.on("message", async message => {
     message.channel.send("wbl");
   }
 
+  //tiktok auto download
+  const regex_tiktok = /https?:\/\/(vm.tiktok.com[^\s"]+|www.tiktok.com[^\s"]+)/;
+  url = message.content.match(regex_tiktok);
+  if (url && !message.author.bot) return client.commands.get("dl").execute(message, [url[0]], true);
+
   // get guild prefix if it exists
   client.commands
     .get("prefix")

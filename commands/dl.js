@@ -16,7 +16,7 @@ module.exports = {
   description: "download and send videos",
   usage: `\`${process.env.PREFIX}dl <url>\``,
   category: "Utility",
-  async execute(message, args) {
+  async execute(message, args, silent = false) {
     if (!args[0]) {
       message.reply(`invalid arguments!`);
       return;
@@ -29,7 +29,8 @@ module.exports = {
       fs.mkdirSync(dir);
     }
 
-    const msg = await message.channel.send("Attempting to download...").then(console.log(`${message.author.username} is attempting to download a video from ${url}`.yellow));
+    console.log(`${message.author.username} is attempting to download a video from ${url}`.yellow);
+    message.channel.startTyping();
 
     youtubedl.exec(url, ["-o", `${dir}/${message.id}.%(ext)s`, `${format1}/${format2}/${format3}/best[ext=mp4][filesize<200M]/bestvideo+bestaudio/best`], {}, async (err, output) => {
       if (err) {
@@ -53,17 +54,18 @@ module.exports = {
 
       if (megabytes > 8) {
         console.log(`Filesize is greater than 8 megabytes! (${megabytes.toFixed(2)}M)`.red);
-        msg.edit("File is too large, compressing...");
+        var msg = await message.channel.send("File is too large, compressing...");
         await compress(path, ext);
         path = path.slice(0, -4) + `_new.${ext}`;
       }
 
-      msg.edit("Sending...");
+      // msg.edit("Sending...");
       const attachment = new Discord.MessageAttachment(path);
-      await message.channel.send(attachment).catch(error => {
-        message.reply(error.message);
+      await message.reply(attachment).catch(error => {
+        if (!silent) message.reply(error.message);
       });
-      msg.delete();
+      if (msg) msg.delete();
+      message.channel.stopTyping();
       fs.unlink(path, error => {
         if (error) throw error;
       });
