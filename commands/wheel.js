@@ -12,14 +12,19 @@ module.exports = {
   usage: `\`${process.env.PREFIX}wheel <bet type> <wager>\`\n
   bet types: \`red\`, \`black\`, \`even\`, \`odd\`, \`high\`, \`low\`, \`green\`, \`<number>\``,
   async execute(message, args) {
-    let input = args[0] ? args[0].toLowerCase() : null;
+    if (args[0] !== undefined && args[1] !== undefined) {
+      var input = args[0].toLowerCase();
+      var wager = args[1].toLowerCase() === "all" ? "all" : numeral(numeral(args[1]).format("0.00")).value();
+    } else {
+      return message.reply(`to play, use this command: ${this.usage}`);
+    }
+
     input = input == "green" ? 0 : input;
+
     let type = isNaN(+input) ? input : "number";
 
-    let wager = args[1].toLowerCase() === "all" ? "all" : numeral(numeral(args[1]).format("0.00")).value();
-
     if (!INPUT_TYPES.includes(type) || (type == "number" && (input > 36 || input < 0 || !Number.isInteger(+input)))) {
-      return message.reply("input a valid bet type!");
+      return message.reply(`to play, use this command: ${this.usage}`);
     }
 
     const data = await GetUserData(message.author);
@@ -33,7 +38,10 @@ module.exports = {
     }
 
     const roll = new Roll(input);
-    const wheelEmbed = new MessageEmbed().setTitle("💸Roulette Wheel");
+    const wheelEmbed = new MessageEmbed()
+      .setTitle("💸 Roulette Wheel")
+      .setFooter(message.member.displayName, message.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 }))
+      .setTimestamp();
 
     if (roll[type][0]) {
       wheelEmbed.setColor("#2bff00");
