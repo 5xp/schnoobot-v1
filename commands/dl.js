@@ -54,7 +54,7 @@ module.exports = {
 
       if (megabytes > 8) {
         console.log(`Filesize is greater than 8 megabytes! (${megabytes.toFixed(2)}M)`.red);
-        var msg = await message.channel.send("File is too large, compressing...");
+        var msg = await message.channel.send(`File is too large - compressing... (${megabytes.toFixed(2)} MB)`);
         await compress(path, ext);
         path = path.slice(0, -4) + `_new.${ext}`;
       }
