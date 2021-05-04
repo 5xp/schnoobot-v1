@@ -20,7 +20,7 @@ module.exports = {
 
       for (var i = 0; i < j; i++) {
         let bal = +index[i].coins.toString();
-        str += `**#${i + 1}: <@${index[i]._id}> | **${numeral(bal).format("$0.00")}\n`;
+        str += `**#${i + 1}: <@${index[i]._id}> | **${numeral(bal).format("$0,00.00")}\n`;
       }
 
       const topEmbed = new MessageEmbed().setColor("#80ff80").addFields({ name: `Top ${j} balances`, value: str });
