@@ -77,8 +77,8 @@ async function GetDaily(user) {
   // has 24 hours passed?
   dailyAvailable = dailyIn(lastDaily);
   if (dailyAvailable === true) {
-    // did less than 28 hours pass?
-    if (Date.now() - lastDaily < 1000 * 60 * 60 * 28) {
+    // did less than 34 hours pass?
+    if (Date.now() - lastDaily < 1000 * 60 * 60 * 34) {
       // increment streak
       let result = await economySchema.findByIdAndUpdate(
         user.id,
