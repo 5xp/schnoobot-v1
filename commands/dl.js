@@ -36,6 +36,7 @@ module.exports = {
       if (err) {
         console.log(err);
         const err_str = err.stderr.match(/^ERROR.*$/gm);
+        message.channel.stopTyping();
         return message.reply(err_str.join("\n"));
       }
 
