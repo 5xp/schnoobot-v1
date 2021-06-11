@@ -53,11 +53,24 @@ module.exports = {
       const stats = fs.statSync(path);
       const megabytes = stats.size / (1024 * 1024);
 
-      if (megabytes > 8) {
-        console.log(`Filesize is greater than 8 megabytes! (${megabytes.toFixed(2)}M)`.red);
-        var msg = await message.channel.send(`File is too large - compressing... (${megabytes.toFixed(2)} MB)`);
-        await compress(path, ext);
-        path = path.slice(0, -4) + `_new.${ext}`;
+      const tier = message.guild.premiumTier;
+      let maxFilesize;
+      switch (tier) {
+        case 2:
+          maxFilesize = 50;
+          break;
+        case 3:
+          maxFilesize = 100;
+          break;
+        default:
+          maxFilesize = 8;
+      }
+
+      if (megabytes > maxFilesize) {
+        console.log(`Filesize is greater than ${maxFilesize} megabytes! (${megabytes.toFixed(2)} MB)`.red);
+        var msg = await message.channel.send(`Compressing file... (${megabytes.toFixed(2)} MB)`);
+        await compress(`${dir}/${message.id}`, ext, maxFilesize);
+        path = `${dir}/${message.id}_new.${ext}`;
       }
 
       // msg.edit("Sending...");
@@ -87,9 +100,9 @@ const getDuration = async (path, ext) => {
   }
 };
 
-async function compress(path, ext) {
-  const duration = (await getDuration(path, ext)) * 1.5;
-  const bitrate = (8 * 8196) / duration - 128;
+async function compress(path, ext, target) {
+  const duration = (await getDuration(`${path}.${ext}`, ext)) * 1.5;
+  const bitrate = (target * 8196) / duration - 128;
 
   var process = new ffmpeg(path);
   video = await process;
