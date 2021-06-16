@@ -1,17 +1,26 @@
 const helper = require("../utils/helper.js");
+const { MesageAttachment, MessageAttachment } = require("discord.js");
 module.exports = {
   name: "eval",
   description: "eval",
   category: "Bot owner",
-  async execute(message, args) {
+  execute(message, args) {
     if (message.author.id !== process.env.OWNERID) {
       return;
     }
     try {
       let code = helper.JoinArgs(args);
-      let evaled = await eval(code);
+      let evaled = eval(code);
       if (typeof evaled !== "string") evaled = require("util").inspect(evaled);
-      message.channel.send(clean(evaled), { code: "xl" });
+      let cleaned = clean(evaled);
+
+      if (cleaned.length > 2000) {
+        const buffer = Buffer.from(cleaned, "utf-8");
+        const attachment = new MessageAttachment(buffer, "response.xl");
+        message.channel.send(attachment);
+      } else {
+        message.channel.send(cleaned, { code: "xl" });
+      }
     } catch (err) {
       message.channel.send(`\`ERROR\` \`\`\`xl\n${clean(err)}\n\`\`\``);
     }
