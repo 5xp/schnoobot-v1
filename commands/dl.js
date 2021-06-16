@@ -52,7 +52,7 @@ module.exports = {
       const stats = fs.statSync(path);
       const megabytes = stats.size / (1024 * 1024);
 
-      const tier = message.guild.premiumTier;
+      const tier = message.guild?.premiumTier || 1;
       let maxFilesize;
       switch (tier) {
         case 2:
