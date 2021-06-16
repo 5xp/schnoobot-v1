@@ -4,13 +4,13 @@ module.exports = {
   name: "eval",
   description: "eval",
   category: "Bot owner",
-  execute(message, args) {
+  async execute(message, args) {
     if (message.author.id !== process.env.OWNERID) {
       return;
     }
     try {
       let code = helper.JoinArgs(args);
-      let evaled = eval(code);
+      let evaled = await eval(code);
       if (typeof evaled !== "string") evaled = require("util").inspect(evaled);
       let cleaned = clean(evaled);
 
