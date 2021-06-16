@@ -2,7 +2,7 @@ const msgCooldowns = new Set();
 const COOLDOWN_TIME = 10;
 // const cache = {};
 const economySchema = require("../schemas/economy-schema");
-const { RandomRange, TruncateDecimals, TimeToString } = require("../utils/helper");
+const { RandomRange, TruncateDecimals } = require("../utils/helper");
 const numeral = require("numeral");
 
 module.exports = {
@@ -114,11 +114,11 @@ async function GetDaily(user) {
     return { awarded: true, reward: numeral(dailyreward * dailystreak).format("$0,0.00"), new_balance: numeral(result.coins).format("$0,0.00"), streak: dailystreak };
   } else {
     // time until next daily
-    return { awarded: false, dailyAvailable: dailyAvailable, new_balance: numeral(+data.coins.toString()).format("$0,0.00") };
+    return { awarded: false, dailyAvailable: dailyAvailable, new_balance: numeral(+data.coins.toString()).format("$0,0.00"), streak: data.dailystreak };
   }
 }
 
 function dailyIn(lastdaily) {
   let time = lastdaily + 1000 * 60 * 60 * 24 - Date.now();
-  return Date.now() - lastdaily > 1000 * 60 * 60 * 24 || !time || !lastdaily ? true : TimeToString(time);
+  return Date.now() - lastdaily > 1000 * 60 * 60 * 24 || !time || !lastdaily ? true : time;
 }

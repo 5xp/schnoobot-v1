@@ -1,4 +1,5 @@
 const { GetDaily } = require("../utils/coin");
+const { TimeToString } = require("../utils/helper");
 const { MessageEmbed } = require("discord.js");
 const economySchema = require("../schemas/economy-schema");
 
@@ -48,12 +49,17 @@ module.exports = {
         fields = [
           {
             name: "**Daily Available**",
-            value: `in ${data.dailyAvailable}`,
+            value: `in ${TimeToString(data.dailyAvailable)}`,
             inline: true,
           },
           {
             name: "**Balance**",
             value: data.new_balance,
+            inline: true,
+          },
+          {
+            name: "**Streak**",
+            value: data.streak + "🔥",
             inline: true,
           },
         ];
@@ -62,8 +68,8 @@ module.exports = {
       dailyEmbed
         .setTitle(`Daily Reward`)
         .addFields(fields)
-        .setFooter(message.member.displayName, message.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 }))
-        .setTimestamp();
+        .setFooter(message.member.displayName + " • Daily available: ", message.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 }))
+        .setTimestamp(Date.now() + data.dailyAvailable);
 
       message.channel.send(dailyEmbed);
     }
