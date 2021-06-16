@@ -94,12 +94,15 @@ module.exports = {
       } else if (reaction.emoji.id == emojis[DOUBLE]) {
         wager *= 2;
         drawCard(yourHand);
-        collector.stop("stand");
-        dealerHand.cards[1].hidden = false;
         update();
-        while (dealerHand.score < 17) {
-          drawCard(dealerHand);
+        if (!finish) {
+          collector.stop("stand");
+          dealerHand.cards[1].hidden = false;
           update();
+          while (dealerHand.score < 17) {
+            drawCard(dealerHand);
+            update();
+          }
         }
         msg.edit(bjEmbed);
       }
@@ -118,7 +121,7 @@ module.exports = {
         hands[i].string = "";
 
         for (var j = 0; j < hands[i].cards.length; j++) {
-          if (hands[i].cards[j].value === "A" && hands[i].score + 11 > 21) hands[i].cards[j].weight = 1;
+          if (hands[i].cards[j].value === "A") hands[i].cards[j].weight = 1;
 
           if (!hands[i].cards[j].hidden) {
             hands[i].score += hands[i].cards[j].weight;
@@ -131,6 +134,13 @@ module.exports = {
         if (hands[i].score > 21) {
           hands[i].bust = true;
           collector.stop("bust");
+        } else {
+          for (var j = 0; j < hands[i].cards.length; j++) {
+            if (hands[i].cards[j].value === "A" && hands[i].score + 10 < 21) {
+              hands[i].cards[j].weight = 11;
+              hands[i].score += 10;
+            }
+          }
         }
 
         if (hands[i].score == 21 && hands[i].cards.length == 2) {
@@ -176,7 +186,7 @@ module.exports = {
           bjEmbed.setDescription("**You drew!**");
           bjEmbed.setColor("#9ecfff");
           bjEmbed.addField("**Net Gain**", numeral(0).format("$0,0.00"), true);
-          bjEmbed.addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true);
+          bjEmbed.addField("**Balance**", numeral(balance).format("$0,0.00"), true);
         } else {
           bjEmbed.setDescription("**You lost!**");
           bjEmbed.setColor("#ff0000");
@@ -211,7 +221,7 @@ function createDeck() {
           var weight = 10;
           break;
         case "A":
-          var weight = 11;
+          var weight = 1;
           break;
         default:
           var weight = +values[j];
