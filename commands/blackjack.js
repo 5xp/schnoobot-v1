@@ -136,7 +136,7 @@ module.exports = {
           collector.stop("bust");
         } else {
           for (var j = 0; j < hands[i].cards.length; j++) {
-            if (hands[i].cards[j].value === "A" && hands[i].score + 10 < 21) {
+            if (!hands[i].cards[j].hidden && hands[i].cards[j].value === "A" && hands[i].score + 10 < 21) {
               hands[i].cards[j].weight = 11;
               hands[i].score += 10;
             }
