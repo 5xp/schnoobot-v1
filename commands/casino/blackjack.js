@@ -16,7 +16,7 @@ module.exports = {
       if (args[0] !== undefined) {
         var wager = args[0].toLowerCase() === "all" ? "all" : numeral(numeral(args[0]).format("0.00")).value();
       } else {
-        return message.reply(`to play, use this command: ${this.usage}`);
+        return message.reply(`to play, use this command: \`${module.exports.usage}\``);
       }
 
       let data = await GetUserData(message.author);

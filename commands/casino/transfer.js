@@ -12,7 +12,7 @@ module.exports = {
     let transferee = FindMember(args[0], message);
 
     if (!transferee) {
-      message.reply(`To transfer, use this command: \`${this.usage}\``);
+      message.reply(`To transfer, use this command: \`\`${module.exports.usage}\`\``);
       return;
     } else if (message.member == transferee) {
       message.reply(`you cannot transfer to yourself!`);

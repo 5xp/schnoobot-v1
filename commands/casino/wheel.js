@@ -13,7 +13,7 @@ module.exports = {
       var input = args[0].toLowerCase();
       var wager = args[1].toLowerCase() === "all" ? "all" : numeral(numeral(args[1]).format("0.00")).value();
     } else {
-      return message.reply(`to play, use this command: ${this.usage}`);
+      return message.reply(`to play, use this command: \`${module.exports.usage}\``);
     }
 
     input = input == "green" ? 0 : input;
@@ -21,7 +21,7 @@ module.exports = {
     let type = isNaN(+input) ? input : "number";
 
     if (!INPUT_TYPES.includes(type) || (type == "number" && (input > 36 || input < 0 || !Number.isInteger(+input)))) {
-      return message.reply(`to play, use this command: ${this.usage}`);
+      return message.reply(`to play, use this command: \`${module.exports.usage}\``);
     }
 
     const data = await GetUserData(message.author);

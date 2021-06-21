@@ -12,7 +12,7 @@ module.exports = {
       var input = numeral(args[0]).value();
       var wager = args[1].toLowerCase() === "all" ? "all" : numeral(numeral(args[1]).format("0.00")).value();
     } else {
-      return message.reply(`to play, use this command: ${this.usage}`);
+      return message.reply(`to play, use this command: \`${module.exports.usage}\``);
     }
 
     if (input <= 1) return message.reply("your target payout must be greater than 1.00x!");

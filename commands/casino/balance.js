@@ -26,7 +26,7 @@ module.exports = {
       let member = !args.length ? message.member : FindMember(args[0], message);
 
       if (!member) {
-        return message.reply(`To use this command: \`${this.usage}\``);
+        return message.reply(`To use this command: \`\`${module.exports.usage}\`\``);
       }
 
       let data = await GetUserData(member);
