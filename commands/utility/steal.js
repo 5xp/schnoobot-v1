@@ -1,10 +1,9 @@
-const helper = require("../utils/helper.js");
 module.exports = {
-  name: "steal",
+  name: ["steal", "emoji"],
   description: "steal an emoji",
-  alias: ["emoji"],
   category: "Utility",
   required_perms: ["MANAGE_EMOJIS"],
+  usage: `${process.env.PREFIX}steal <attachment/url> <name>`,
   execute(message, args) {
     let attachment = message.attachments.first();
 

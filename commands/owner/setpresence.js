@@ -1,8 +1,7 @@
-const helper = require("../utils/helper.js");
+const helper = require("../../utils/helper.js");
 module.exports = {
   name: "setpresence",
   description: "set the presence of the bot",
-  category: "Bot owner",
   execute(message, args) {
     if (message.author.id !== process.env.OWNERID) {
       message.reply("You must own the bot to change the avatar!");

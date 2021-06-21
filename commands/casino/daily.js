@@ -1,12 +1,11 @@
-const { GetDaily } = require("../utils/coin");
-const { TimeToString } = require("../utils/helper");
+const { GetDaily } = require("../../utils/coin");
+const { TimeToString } = require("../../utils/helper");
 const { MessageEmbed } = require("discord.js");
-const economySchema = require("../schemas/economy-schema");
+const economySchema = require("../../schemas/economy-schema");
 
 module.exports = {
   name: "daily",
   description: "get daily reward",
-  category: "Fun",
   async execute(message, args) {
     if (args[0] == "top") {
       const index = await economySchema.find().sort({ dailystreak: -1 });

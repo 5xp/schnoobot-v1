@@ -1,12 +1,11 @@
 const Discord = require("discord.js");
-const helper = require("../utils/helper.js");
+const helper = require("../../utils/helper.js");
 
 module.exports = {
-  name: "avatar",
+  name: ["avatar", "av", "pfp"],
   description: "show avatar of yourself or another user",
-  usage: `\`${process.env.PREFIX}avatar @user\``,
+  usage: `${process.env.PREFIX}avatar\n${process.env.PREFIX}avatar @user`,
   category: "Utility",
-  alias: ["av", "pfp"],
   execute(message, args) {
     let avatarFormat = { format: "png", dynamic: true, size: 2048 };
     desiredMember = helper.FindMember(helper.JoinArgs(args), message);

@@ -1,10 +1,9 @@
-const helper = require("../utils/helper.js");
+const helper = require("../../utils/helper.js");
 module.exports = {
-  name: "moveall",
+  name: ["moveall", "move", "m"],
   description: "move all members to another voice channel",
-  usage: `\`${process.env.PREFIX}moveall <channel>\``,
+  usage: `${process.env.PREFIX}moveall <channel>`,
   category: "Utility",
-  alias: ["move", "m"],
   required_perms: ["MOVE_MEMBERS"],
   execute(message, args) {
     if (!args.length) {

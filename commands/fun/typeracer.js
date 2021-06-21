@@ -1,18 +1,13 @@
 const fs = require("fs");
 const levenshtein = require("js-levenshtein");
 const Discord = require("discord.js");
-const leaderboardSchema = require("../schemas/typeracer-leaderboard-schema");
-const helper = require("../utils/helper.js");
+const leaderboardSchema = require("../../schemas/typeracer-leaderboard-schema");
+const helper = require("../../utils/helper.js");
 
 module.exports = {
-  name: "typeracer",
+  name: ["typeracer", "type", "t"],
   description: "typing contest",
-  category: "Fun",
-  usage: `\`${process.env.PREFIX}typeracer\`\n
-  \`${process.env.PREFIX}typeracer top\`\n
-  \`${process.env.PREFIX}typeracer me\`\n
-  \`${process.env.PREFIX}typeracer <@user>\`\n`,
-  alias: ["type", "t"],
+  usage: `${process.env.PREFIX}typeracer\n${process.env.PREFIX}typeracer top\n${process.env.PREFIX}typeracer me\n${process.env.PREFIX}typeracer <@user>`,
   execute(message, args) {
     const prompts = JSON.parse(fs.readFileSync("./prompts.json"));
     const currentPrompt = prompts[Math.floor(Math.random() * prompts.length)];

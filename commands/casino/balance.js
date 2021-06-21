@@ -1,16 +1,13 @@
-const { GetUserData, dailyIn } = require("../utils/coin");
-const { FindMember } = require("../utils/helper");
+const { GetUserData, dailyIn } = require("../../utils/coin");
+const { FindMember } = require("../../utils/helper");
 const numeral = require("numeral");
 const { MessageEmbed } = require("discord.js");
-const economySchema = require("../schemas/economy-schema");
+const economySchema = require("../../schemas/economy-schema");
 
 module.exports = {
-  name: "balance",
+  name: ["balance", "bal"],
   description: "get your balance",
-  category: "Fun",
-  usage: `\`${process.env.PREFIX}balance <@member?>\`
-  \n\`${process.env.PREFIX}balance top\``,
-  alias: ["bal"],
+  usage: `${process.env.PREFIX}balance\n${process.env.PREFIX}balance <@member?>\n${process.env.PREFIX}balance top`,
   async execute(message, args) {
     if (args[0] == "top") {
       const index = await economySchema.find().sort({ coins: -1 });

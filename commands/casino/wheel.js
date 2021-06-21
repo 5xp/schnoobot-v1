@@ -1,16 +1,13 @@
 const { MessageEmbed } = require("discord.js");
-const { AwardPoints, GetUserData } = require("../utils/coin");
+const { AwardPoints, GetUserData } = require("../../utils/coin");
 const numeral = require("numeral");
 const INPUT_TYPES = ["red", "black", "even", "odd", "low", "high", "number"];
 const DIGIT = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
 
 module.exports = {
-  name: "wheel",
+  name: ["wheel", "roulette"],
   description: "roulette wheel",
-  alias: ["roulette"],
-  category: "Fun",
-  usage: `\`${process.env.PREFIX}wheel <bet type> <wager>\`\n
-  bet types: \`red\`, \`black\`, \`even\`, \`odd\`, \`high\`, \`low\`, \`green\`, \`<number>\``,
+  usage: `${process.env.PREFIX}wheel <bet type> <wager>\nbet types: red, black, even, odd, high, low, green, <number>`,
   async execute(message, args) {
     if (args[0] !== undefined && args[1] !== undefined) {
       var input = args[0].toLowerCase();

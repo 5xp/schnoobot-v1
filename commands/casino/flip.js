@@ -1,13 +1,11 @@
 const { MessageEmbed } = require("discord.js");
-const { AwardPoints, GetUserData } = require("../utils/coin");
+const { AwardPoints, GetUserData } = require("../../utils/coin");
 const numeral = require("numeral");
 
 module.exports = {
-  name: "flip",
+  name: ["flip", "coinflip"],
   description: "flip a coin",
-  usage: `\`${process.env.PREFIX}flip <heads/tails> <bet>\``,
-  alias: ["coinflip"],
-  category: "Fun",
+  usage: `${process.env.PREFIX}flip <heads/tails> <bet>`,
   async execute(message, args) {
     if (args[0] !== undefined && args[1] !== undefined) {
       var input = args[0].toLowerCase();

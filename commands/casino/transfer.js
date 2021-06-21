@@ -1,13 +1,12 @@
-const { AwardPoints, GetUserData } = require("../utils/coin");
+const { AwardPoints, GetUserData } = require("../../utils/coin");
 const numeral = require("numeral");
-const { FindMember } = require("../utils/helper");
+const { FindMember } = require("../../utils/helper");
 const Discord = require("discord.js");
 
 module.exports = {
   name: "transfer",
   description: "transfer coins",
-  category: "Fun",
-  usage: `\`${process.env.PREFIX}transfer <user> <amount>\``,
+  usage: `${process.env.PREFIX}transfer <@user> <amount>`,
   async execute(message, args) {
     let transfer = numeral(numeral(args[1]).format("0.00")).value();
     let transferee = FindMember(args[0], message);

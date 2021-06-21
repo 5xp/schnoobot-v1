@@ -1,14 +1,12 @@
 const { MessageEmbed } = require("discord.js");
-const { AwardPoints, GetUserData } = require("../utils/coin");
+const { AwardPoints, GetUserData } = require("../../utils/coin");
 const numeral = require("numeral");
 var blackjackCache = {};
 
 module.exports = {
-  name: "blackjack",
+  name: ["blackjack", "bj"],
   description: "beat dealer's hand without going over 21; dealer stands on all 17s",
-  alias: ["bj"],
-  usage: `\`${process.env.PREFIX}blackjack <bet>\``,
-  category: "Fun",
+  usage: `${process.env.PREFIX}blackjack <bet>`,
   async execute(message, args) {
     if (blackjackCache[message.author.id]) {
       var inProgress = true;

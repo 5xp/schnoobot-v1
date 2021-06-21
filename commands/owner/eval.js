@@ -1,9 +1,7 @@
-const helper = require("../utils/helper.js");
-const { MesageAttachment, MessageAttachment } = require("discord.js");
+const helper = require("../../utils/helper.js");
+const { MessageAttachment } = require("discord.js");
 module.exports = {
   name: "eval",
-  description: "eval",
-  category: "Bot owner",
   async execute(message, args) {
     if (message.author.id !== process.env.OWNERID) {
       return;

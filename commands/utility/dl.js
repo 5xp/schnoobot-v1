@@ -10,10 +10,9 @@ const format2 = "--format=worstvideo[ext=mp4][filesize>8M]+bestaudio[ext=m4a]";
 const format3 = "--format=bestvideo[ext=mp4][filesize<200M]+bestaudio[ext=m4a]";
 
 module.exports = {
-  name: "dl",
-  alias: ["download", "tiktok", "youtube"],
+  name: ["dl", "download", "tiktok", "youtube", "video"],
   description: "download and send videos",
-  usage: `\`${process.env.PREFIX}dl <url>\``,
+  usage: `${process.env.PREFIX}dl <url>`,
   category: "Utility",
   async execute(message, args, silent = false) {
     if (!args[0]) {
