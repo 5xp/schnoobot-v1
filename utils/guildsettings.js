@@ -5,7 +5,7 @@ async function getPrefix(id) {
   if (prefixCache.has(id)) return prefixCache.get(id);
 
   const result = await settingsSchema.findById(id);
-  if (!result.prefix) {
+  if (!result || !result.prefix) {
     prefixCache.set(id, process.env.PREFIX);
     return process.env.PREFIX;
   } else {
