@@ -6,6 +6,8 @@ const mongo = require("./utils/mongo.js");
 const { HandleCoin } = require("./utils/coin");
 
 const client = new Discord.Client();
+const disbut = require("discord-buttons");
+disbut(client);
 
 client.once("ready", async () => {
   console.log(`Schnoobot is online!`.blue);
@@ -19,6 +21,10 @@ client.once("ready", async () => {
   });
 
   HandleCoin(client);
+});
+
+client.on("clickButton", async button => {
+  await button.defer();
 });
 
 client.login(process.env.TOKEN);

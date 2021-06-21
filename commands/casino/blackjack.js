@@ -1,5 +1,6 @@
 const { MessageEmbed } = require("discord.js");
 const { AwardPoints, GetUserData } = require("../../utils/coin");
+const disbut = require("discord-buttons");
 const numeral = require("numeral");
 var blackjackCache = {};
 
@@ -59,27 +60,30 @@ module.exports = {
     update();
 
     if (inProgress) message.channel.send("Finish your previous game first!");
-    const msg = await message.channel.send(bjEmbed);
 
     // user input
-    const filter = (reaction, user) => {
-      return [emojis[HIT], emojis[STAND], emojis[DOUBLE]].includes(reaction.emoji.id) && user.id === message.author.id;
-    };
-    var collector = msg.createReactionCollector(filter, { time: 45000 }),
-      finish = false;
+    let hitButton = new disbut.MessageButton().setLabel("Hit").setEmoji(emojis[HIT]).setStyle("green").setID("hit");
 
-    blackjackCache[message.author.id].collector = collector;
+    let standButton = new disbut.MessageButton().setLabel("Stand").setEmoji(emojis[STAND]).setStyle("red").setID("stand");
 
-    await msg.react(emojis[HIT]);
-    await msg.react(emojis[STAND]);
-    if (wager * 2 <= balance) await msg.react(emojis[DOUBLE]);
+    let doubleButton = new disbut.MessageButton().setLabel("Double Down").setEmoji(emojis[DOUBLE]).setStyle("blurple").setID("double");
 
-    collector.on("collect", reaction => {
-      if (reaction.emoji.id == emojis[HIT]) {
+    if (wager * 2 > balance) doubleButton.setDisabled(true);
+
+    let bjRow = new disbut.MessageActionRow().addComponent(hitButton).addComponent(standButton).addComponent(doubleButton);
+
+    const msg = await message.channel.send({ component: bjRow, embed: bjEmbed });
+
+    const filter = button => button.clicker.user.id === message.author.id;
+    const collector = msg.createButtonCollector(filter, { time: 45000 });
+    var finish = false;
+
+    collector.on("collect", button => {
+      if (button.id === "hit") {
         drawCard(yourHand);
         update();
-        msg.edit(bjEmbed);
-      } else if (reaction.emoji.id == emojis[STAND]) {
+        msg.edit({ component: bjRow, embed: bjEmbed });
+      } else if (button.id === "stand") {
         // dealer starts drawing
         collector.stop("stand");
         dealerHand.cards[1].hidden = false;
@@ -88,8 +92,8 @@ module.exports = {
           drawCard(dealerHand);
           update();
         }
-        msg.edit(bjEmbed);
-      } else if (reaction.emoji.id == emojis[DOUBLE]) {
+        msg.edit({ component: null, embed: bjEmbed });
+      } else if (button.id === "double") {
         wager *= 2;
         drawCard(yourHand);
         update();
@@ -102,9 +106,8 @@ module.exports = {
             update();
           }
         }
-        msg.edit(bjEmbed);
+        msg.edit({ component: null, embed: bjEmbed });
       }
-      removeReactions(msg, message.author.id);
     });
 
     function drawCard(hand) {

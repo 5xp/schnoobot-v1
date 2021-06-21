@@ -2,6 +2,7 @@ const Discord = require("discord.js");
 const fs = require("fs");
 const path = require("path");
 const handlerFile = "command-handler.js";
+const { MessageButton } = require("discord-buttons");
 
 module.exports = {
   name: ["help", "h"],
@@ -10,7 +11,6 @@ module.exports = {
   category: "Utility",
   async execute(message, args) {
     let { client } = message;
-    // let cmdlist = { Utility: [], Fun: [], "Guild settings": [], "Bot owner": [] };
     let currentPage = 0;
     let cmdlist = {};
 
@@ -39,26 +39,25 @@ module.exports = {
     readCommands("../");
 
     if (!args[0]) {
-      const msg = await message.channel.send(GetEmbedGeneric(currentPage));
-      msg.react("◀").then(() => msg.react("▶"));
+      const leftButton = new MessageButton().setEmoji("◀").setStyle("blurple").setID("left");
+      const rightButton = new MessageButton().setEmoji("▶").setStyle("blurple").setID("right");
 
-      const filter = (reaction, user) => {
-        return ["◀", "▶"].includes(reaction.emoji.name) && user.id === message.author.id;
-      };
+      const msg = await message.channel.send({ buttons: [leftButton, rightButton], embed: GetEmbedGeneric(currentPage) });
 
-      const collector = msg.createReactionCollector(filter, { time: 30000 });
+      const filter = button => button.clicker.user.id === message.author.id;
 
-      collector.on("collect", (reaction, user) => {
-        if (reaction.emoji.name == "▶") {
+      const collector = msg.createButtonCollector(filter, { time: 30000 });
+
+      collector.on("collect", button => {
+        if (button.id === "right") {
           currentPage++;
           currentPage = Math.min(currentPage, Object.keys(cmdlist).length - 1);
-          msg.edit(GetEmbedGeneric(currentPage));
+          msg.edit({ buttons: [leftButton, rightButton], embed: GetEmbedGeneric(currentPage) });
         } else {
           currentPage--;
           currentPage = Math.max(currentPage, 0);
-          msg.edit(GetEmbedGeneric(currentPage));
+          msg.edit({ buttons: [leftButton, rightButton], embed: GetEmbedGeneric(currentPage) });
         }
-        RemoveReactions(msg, message.author.id);
       });
     } else {
       let desiredCmd = args[0].toLowerCase();
@@ -82,7 +81,6 @@ module.exports = {
       cmd = client.commands.filter(command => {
         return command.name.includes(cmd);
       })[0];
-      // cmd = client.commands.get(cmd);
       if (cmd == undefined) return undefined;
       var helpEmbed = new Discord.MessageEmbed();
       helpEmbed
@@ -94,17 +92,6 @@ module.exports = {
       if (cmd.required_perms) helpEmbed.addField("**Permissions required**", cmd.required_perms.join(", "));
 
       return helpEmbed;
-    }
-
-    async function RemoveReactions(message, id) {
-      const userReactions = message.reactions.cache.filter(reaction => reaction.users.cache.has(id));
-      try {
-        for (const reaction of userReactions.values()) {
-          await reaction.users.remove(id);
-        }
-      } catch (error) {
-        console.error("Failed to remove reactions.");
-      }
     }
   },
 };
