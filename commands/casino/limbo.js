@@ -54,7 +54,7 @@ module.exports = {
 
 function generatePoint() {
   const hex = crypto.randomBytes(32).toString("hex");
-  if (parseInt(hex, 16) % 33 === 0) return 1;
+  // if (parseInt(hex, 16) % 33 === 0) return 1;
 
   const h = parseInt(hex.slice(0, 52 / 4), 16);
   const e = Math.pow(2, 52);
