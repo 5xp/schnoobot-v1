@@ -99,6 +99,8 @@ module.exports = {
           .addField("**Mines**", numMines, true)
           .addField("**Profit**", numeral(-wager).format("$0,0.00"), true)
           .addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true);
+
+        AwardPoints(message.author, -wager);
       } else {
         cellsRevealed++;
 
@@ -112,6 +114,8 @@ module.exports = {
             .setColor("#2bff00")
             .addField("**Profit**", `${numeral(nextProfit).format("$0,0.00")} (${nextMult.toFixed(2)}x)`, true)
             .addField("**Balance**", numeral(balance + nextProfit).format("$0,0.00"), true);
+
+          AwardPoints(message.author, nextProfit);
         } else {
           let [currentProfit, currentMult, nextProfit, nextMult] = calculateMultiplier(numMines + cellsRevealed, wager);
 
@@ -128,6 +132,7 @@ module.exports = {
             const msgFilter = msg => msg.author.id === message.author.id && msg.content.toLowerCase().includes("cashout");
             const msgCollector = message.channel.createMessageCollector(msgFilter);
             msgCollector.on("collect", m => {
+              let [currentProfit, currentMult] = calculateMultiplier(numMines + cellsRevealed, wager);
               revealGrid(grid);
               minesEmbed = new MessageEmbed()
                 .setDescription("**You won!**")
@@ -135,6 +140,8 @@ module.exports = {
                 .setColor("#2bff00")
                 .addField("**Profit**", `${numeral(currentProfit).format("$0,0.00")} (${currentMult.toFixed(2)}x)`, true)
                 .addField("**Balance**", numeral(balance + currentProfit).format("$0,0.00"), true);
+
+              AwardPoints(message.author, currentProfit);
               msgCollector.stop();
               btnCollector.stop();
 
