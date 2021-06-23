@@ -1,5 +1,5 @@
 const { GetUserData, dailyIn } = require("../../utils/coin");
-const { FindMember } = require("../../utils/helper");
+const { FindMember, TimeToString } = require("../../utils/helper");
 const numeral = require("numeral");
 const { MessageEmbed } = require("discord.js");
 const economySchema = require("../../schemas/economy-schema");
@@ -31,12 +31,12 @@ module.exports = {
 
       let data = await GetUserData(member);
 
-      let balance = data && data.coins ? +data.coins.toString() : 0;
-      let lastdaily = data && data.lastdaily ? data.lastdaily : undefined;
-      let streak = data && data.dailystreak ? data.dailystreak + "🔥" : 0;
+      let balance = data?.coins ? +data.coins.toString() : 0;
+      let lastdaily = data?.lastdaily;
+      let streak = data?.dailystreak ? data.dailystreak + "🔥" : 0;
 
       let dailyAvailable = dailyIn(lastdaily);
-      let dailystr = dailyAvailable === true ? "NOW" : "in " + dailyAvailable;
+      let dailystr = dailyAvailable === true ? "NOW" : "in " + TimeToString(dailyAvailable);
 
       let balanceEmbed = new MessageEmbed()
         .setColor("#0000FF")

@@ -119,6 +119,6 @@ async function GetDaily(user) {
 }
 
 function dailyIn(lastdaily) {
-  let time = lastdaily + 1000 * 60 * 60 * 24 - Date.now();
-  return Date.now() - lastdaily > 1000 * 60 * 60 * 24 || !time || !lastdaily ? true : time;
+  let time = lastdaily + 1000 * 60 * 60 * 18 - Date.now();
+  return Date.now() - lastdaily > 1000 * 60 * 60 * 18 || !time || !lastdaily ? true : time;
 }

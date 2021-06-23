@@ -44,7 +44,12 @@ module.exports = {
           },
         ];
       } else {
-        dailyEmbed.setColor("#ff0000").setDescription("You have already claimed your reward!");
+        dailyEmbed
+          .setColor("#ff0000")
+          .setDescription("You have already claimed your reward!")
+          .setFooter(message.member.displayName + " • Daily available: ", message.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 }))
+          .setTimestamp(Date.now() + data.dailyAvailable);
+
         fields = [
           {
             name: "**Daily Available**",
@@ -64,11 +69,7 @@ module.exports = {
         ];
       }
 
-      dailyEmbed
-        .setTitle(`Daily Reward`)
-        .addFields(fields)
-        .setFooter(message.member.displayName + " • Daily available: ", message.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 }))
-        .setTimestamp(Date.now() + data.dailyAvailable);
+      dailyEmbed.setTitle(`Daily Reward`).addFields(fields);
 
       message.channel.send(dailyEmbed);
     }
