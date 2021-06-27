@@ -8,12 +8,11 @@ const rows = 5;
 
 // beginning state of all buttons
 const hiddenButton = new MessageButton().setLabel(" ").setStyle("gray").setID("hiddenButton");
-
 // revealed gem
 const gemButton = new MessageButton().setEmoji("💎").setStyle("blurple").setID("gemButton"); //.setDisabled(true);
-
 // revealed mine
 const mineButton = new MessageButton().setEmoji("💣").setStyle("red").setID("mineButton"); //.setDisabled(true);
+const cashoutButton = new MessageButton().setLabel("Cash out").setStyle("green").setID("cashoutButton");
 
 module.exports = {
   name: "mines",
@@ -62,20 +61,26 @@ module.exports = {
     // create discord buttons
     var buttonRows = createButtonGrid(rows, columns, grid);
 
-    let [, , nextProfit, nextMult] = calculateMultiplier(numMines, wager);
+    let [, , nextProfit, nextMult, winOdds] = calculateMultiplier(numMines, wager);
 
     let minesEmbed = new MessageEmbed()
       .setTitle("💣 Mines")
       .setColor("#ffffff")
       .addField("**Mines**", numMines, true)
       .addField("**Total Profit**", `${numeral(0).format("$0,0.00")} (1.00x)`, true)
-      .addField("**Profit on Next Tile**", `${numeral(nextProfit).format("$0,0.00")} (${nextMult.toFixed(2)}x)`, true);
+      .addField("**Profit on Next Tile**", `${numeral(nextProfit).format("$0,0.00")} (${nextMult.toFixed(2)}x)`, true)
+      .addField("**Win % of Next Tile**", `${numeral(winOdds).format("0.00%")}`, true);
 
     const msg = await message.channel.send({ components: buttonRows, embed: minesEmbed });
 
+    // have to send a second message for the 26th button
+    // send a 1x1 image to get a small gap
+    const msg2 = await message.channel.send("https://cdn.discordapp.com/attachments/793778786943762434/858505668481515540/image.png", { buttons: cashoutButton });
+
     const btnFilter = button => button.clicker.user.id === message.author.id;
     const btnCollector = msg.createButtonCollector(btnFilter);
-    let collectorFlag = false;
+    const cashoutCollector = msg2.createButtonCollector(btnFilter);
+    let cashedOut = false;
 
     let cellsRevealed = 0;
 
@@ -117,7 +122,7 @@ module.exports = {
 
           AwardPoints(message.author, nextProfit);
         } else {
-          let [currentProfit, currentMult, nextProfit, nextMult] = calculateMultiplier(numMines + cellsRevealed, wager);
+          let [currentProfit, currentMult, nextProfit, nextMult, winOdds] = calculateMultiplier(numMines + cellsRevealed, wager);
 
           minesEmbed = new MessageEmbed()
             .setTitle("💣 Mines")
@@ -125,35 +130,44 @@ module.exports = {
             .addField("**Mines**", numMines, true)
             .addField("**Total Profit**", `${numeral(currentProfit).format("$0,0.00")} (${currentMult}x)`, true)
             .addField("**Profit on Next Tile**", `${numeral(nextProfit).format("$0,0.00")} (${nextMult.toFixed(2)}x)`, true)
-            .setFooter('Type "cashout" to cash out');
-
-          if (!collectorFlag) {
-            collectorFlag = true;
-            const msgFilter = msg => msg.author.id === message.author.id && msg.content.toLowerCase().includes("cashout");
-            const msgCollector = message.channel.createMessageCollector(msgFilter);
-            msgCollector.on("collect", m => {
-              let [currentProfit, currentMult] = calculateMultiplier(numMines + cellsRevealed, wager);
-              revealGrid(grid);
-              minesEmbed = new MessageEmbed()
-                .setDescription("**You won!**")
-                .setTitle("💣 Mines")
-                .setColor("#2bff00")
-                .addField("**Profit**", `${numeral(currentProfit).format("$0,0.00")} (${currentMult.toFixed(2)}x)`, true)
-                .addField("**Balance**", numeral(balance + currentProfit).format("$0,0.00"), true);
-
-              AwardPoints(message.author, currentProfit);
-              msgCollector.stop();
-              btnCollector.stop();
-
-              buttonRows = createButtonGrid(rows, columns, grid);
-              msg.edit({ components: buttonRows, embed: minesEmbed });
-            });
-          }
+            .addField("**Win % of Next Tile**", `${numeral(winOdds).format("0.00%")}`, true);
         }
       }
 
       buttonRows = createButtonGrid(rows, columns, grid);
       msg.edit({ components: buttonRows, embed: minesEmbed });
+    });
+
+    cashoutCollector.on("collect", button => {
+      if (button.id === "cashoutButton" && !cashedOut) {
+        cashedOut = true;
+        if (cellsRevealed > 0) {
+          let [currentProfit, currentMult] = calculateMultiplier(numMines + cellsRevealed, wager);
+          revealGrid(grid);
+          minesEmbed = new MessageEmbed()
+            .setTitle("💣 Mines")
+            .setColor("#2bff00")
+            .addField("**Profit**", `${numeral(currentProfit).format("$0,0.00")} (${currentMult.toFixed(2)}x)`, true)
+            .addField("**Balance**", numeral(balance + currentProfit).format("$0,0.00"), true);
+
+          AwardPoints(message.author, currentProfit);
+          btnCollector.stop();
+
+          buttonRows = createButtonGrid(rows, columns, grid);
+          msg.edit({ components: buttonRows, embed: minesEmbed });
+        } else {
+          revealGrid(grid);
+          btnCollector.stop();
+          minesEmbed = new MessageEmbed()
+            .setTitle("💣 Mines")
+            .setColor("#ffffff")
+            .addField("**Profit**", `${numeral(0).format("$0,0.00")} (1.00x)`, true)
+            .addField("**Balance**", numeral(balance).format("$0,0.00"), true);
+
+          buttonRows = createButtonGrid(rows, columns, grid);
+          msg.edit({ components: buttonRows, embed: minesEmbed });
+        }
+      }
     });
   },
 };
@@ -219,7 +233,8 @@ function calculateMultiplier(sum, wager) {
   let currentProfit = wager * currentMult - wager;
   let nextMult = Math.round(100 * (25 / (25 - sum))) / 100;
   let nextProfit = wager * nextMult - wager;
-  return [currentProfit, currentMult, nextProfit, nextMult];
+  let winOdds = (25 - sum) / 25;
+  return [currentProfit, currentMult, nextProfit, nextMult, winOdds];
 }
 
 function revealGrid(grid) {
