@@ -12,7 +12,7 @@ module.exports = client => {
       const stat = fs.lstatSync(path.join(__dirname, dir, file));
       if (stat.isDirectory()) {
         readCommands(path.join(dir, file));
-      } else if (file !== handlerFile) {
+      } else if (file !== handlerFile && file.endsWith(".js")) {
         const command = require(path.join(__dirname, dir, file));
         let { name, description = "", usage = "", disabled = false, hidden = false, permissions = [], execute } = command;
 
