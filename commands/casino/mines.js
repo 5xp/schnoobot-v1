@@ -75,12 +75,11 @@ module.exports = {
 
     // have to send a second message for the 26th button
     // send a 1x1 image to get a small gap
-    const msg2 = await message.channel.send("https://cdn.discordapp.com/attachments/793778786943762434/858505668481515540/image.png", { buttons: cashoutButton });
+    const msg2 = await message.channel.send({ buttons: cashoutButton, files: ["https://cdn.discordapp.com/attachments/793778786943762434/858505668481515540/image.png"] });
 
     const btnFilter = button => button.clicker.user.id === message.author.id;
     const btnCollector = msg.createButtonCollector(btnFilter);
     const cashoutCollector = msg2.createButtonCollector(btnFilter);
-    let cashedOut = false;
 
     let cellsRevealed = 0;
 
@@ -96,6 +95,7 @@ module.exports = {
       // game over, reveal each cell
       if (grid[row][col].mine) {
         btnCollector.stop();
+        cashoutCollector.stop();
         revealGrid(grid);
         minesEmbed = new MessageEmbed()
           .setTitle("💣 Mines")
@@ -112,6 +112,7 @@ module.exports = {
         // revealed all non-mines
         if (25 - numMines == cellsRevealed) {
           btnCollector.stop();
+          cashoutCollector.stop();
           revealGrid(grid);
           minesEmbed = new MessageEmbed()
             .setDescription("**You won!**")
@@ -139,11 +140,13 @@ module.exports = {
     });
 
     cashoutCollector.on("collect", button => {
-      if (button.id === "cashoutButton" && !cashedOut) {
-        cashedOut = true;
+      if (button.id === "cashoutButton") {
+        cashoutCollector.stop();
+        btnCollector.stop();
+        revealGrid(grid);
+
         if (cellsRevealed > 0) {
           let [currentProfit, currentMult] = calculateMultiplier(numMines + cellsRevealed, wager);
-          revealGrid(grid);
           minesEmbed = new MessageEmbed()
             .setTitle("💣 Mines")
             .setColor("#2bff00")
@@ -151,13 +154,10 @@ module.exports = {
             .addField("**Balance**", numeral(balance + currentProfit).format("$0,0.00"), true);
 
           AwardPoints(message.author, currentProfit);
-          btnCollector.stop();
 
           buttonRows = createButtonGrid(rows, columns, grid);
           msg.edit({ components: buttonRows, embed: minesEmbed });
         } else {
-          revealGrid(grid);
-          btnCollector.stop();
           minesEmbed = new MessageEmbed()
             .setTitle("💣 Mines")
             .setColor("#ffffff")
