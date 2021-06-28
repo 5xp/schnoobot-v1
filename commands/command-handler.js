@@ -26,30 +26,39 @@ module.exports = client => {
   readCommands("");
 
   client.on("message", async message => {
+    if (message.author.bot) return;
     const { member, content, guild } = message;
     const prefix = await getPrefix(guild.id);
 
-    for (const command of client.commands) {
-      let { name, description = "", usage = "", disabled = false, hidden = false, permissions = [], execute } = command;
+    if (content.startsWith(prefix)) {
+      for (const command of client.commands) {
+        let { name, description = "", usage = "", disabled = false, hidden = false, permissions = [], execute } = command;
 
-      for (const alias of name) {
-        if (content.toLowerCase().split(" ")[0] === `${prefix}${alias.toLowerCase()}`) {
-          for (const permission of permissions) {
-            // TODO: list missing permissions
-            if (!member.hasPermission(permission)) {
-              return message.reply(`missing permissions!`);
+        for (const alias of name) {
+          if (content.toLowerCase().split(" ")[0] === `${prefix}${alias.toLowerCase()}`) {
+            for (const permission of permissions) {
+              // TODO: list missing permissions
+              if (!member.hasPermission(permission)) {
+                return message.reply(`missing permissions!`);
+              }
             }
+
+            if (disabled) {
+              return message.reply("this command is disabled!");
+            }
+
+            const args = content.split(/[ ]+/);
+            args.shift();
+
+            execute(message, args, args.join(" "));
           }
-
-          if (disabled) {
-            return message.reply("this command is disabled!");
-          }
-
-          const args = content.split(/[ ]+/);
-          args.shift();
-
-          execute(message, args, args.join(" "));
         }
+      }
+    } else {
+      // auto tiktok download
+      const url = content.match(/https?:\/\/(vm.tiktok.com[^\s"]+|www.tiktok.com[^\s"]+)/);
+      if (url) {
+        return client.commands.find(cmd => cmd.name.includes("dl")).execute(message, [url[0]], true);
       }
     }
   });
