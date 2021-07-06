@@ -14,10 +14,10 @@ module.exports = client => {
         readCommands(path.join(dir, file));
       } else if (file !== handlerFile && file.endsWith(".js")) {
         const command = require(path.join(__dirname, dir, file));
-        let { name, description = "", usage = "", disabled = false, hidden = false, permissions = [], execute } = command;
+        let { name, description = "", usage = "", disabled = false, hidden = false, required_perms = [], execute } = command;
 
         if (typeof name === "string") command.name = [name];
-        if (typeof permissions === "string") command.permissions = [permissions];
+        if (typeof required_perms === "string") command.required_perms = [required_perms];
         client.commands.push(command);
       }
     }
@@ -46,11 +46,11 @@ module.exports = client => {
 
     if (content.startsWith(prefix)) {
       for (const command of client.commands) {
-        let { name, description = "", usage = "", disabled = false, hidden = false, permissions = [], execute } = command;
+        let { name, description = "", usage = "", disabled = false, hidden = false, required_perms = [], execute } = command;
 
         for (const alias of name) {
           if (content.toLowerCase().split(" ")[0] === `${prefix}${alias.toLowerCase()}`) {
-            for (const permission of permissions) {
+            for (const permission of required_perms) {
               // TODO: list missing permissions
               if (!member.hasPermission(permission)) {
                 return message.reply(`missing permissions!`);
