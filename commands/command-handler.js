@@ -30,6 +30,20 @@ module.exports = client => {
     const { member, content, guild } = message;
     const prefix = await getPrefix(guild?.id);
 
+    if (!client.application?.owner) await client.application?.fetch();
+
+    // temporary command to deploy commands to current guild
+    if (message.content.toLowerCase() === `${prefix}deploy` && message.author.id === client.application?.owner.id) {
+      const slashCommands = [];
+      for (const command of client.commands) {
+        let { name, description = "This description is empty!", options = null } = command;
+        const cmd = { name: name[0], description };
+        if (options) cmd.options = options;
+        slashCommands.push(cmd);
+      }
+      await message.guild?.commands.set(slashCommands);
+    }
+
     if (content.startsWith(prefix)) {
       for (const command of client.commands) {
         let { name, description = "", usage = "", disabled = false, hidden = false, permissions = [], execute } = command;
@@ -60,6 +74,12 @@ module.exports = client => {
       if (url) {
         return client.commands.find(cmd => cmd.name.includes("dl")).execute(message, [url[0]], true);
       }
+    }
+  });
+
+  client.on("interactionCreate", interaction => {
+    if (interaction.isCommand()) {
+      client.commands.find(cmd => cmd.name.includes(interaction.commandName)).execute(interaction);
     }
   });
 };
