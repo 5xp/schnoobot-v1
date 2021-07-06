@@ -48,7 +48,7 @@ module.exports = {
       limboEmbed.addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true);
       AwardPoints(message.author, -wager);
     }
-    message.channel.send(limboEmbed);
+    message.reply({ embeds: [limboEmbed], allowedMentions: { repliedUser: false } });
   },
 };
 

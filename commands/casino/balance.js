@@ -21,7 +21,7 @@ module.exports = {
       }
 
       const topEmbed = new MessageEmbed().setColor("#80ff80").addFields({ name: `Top ${j} balances`, value: str });
-      message.channel.send(topEmbed);
+      message.reply({ embeds: [topEmbed], allowedMentions: { repliedUser: false } });
     } else {
       let member = !args.length ? message.member : FindMember(args[0], message);
 
@@ -44,7 +44,7 @@ module.exports = {
         .addField("**Balance**", numeral(balance).format("$0,0.00"), true)
         .addField("**Daily available**", `${dailystr}`, true)
         .addField("**Streak**", streak, true);
-      message.channel.send(balanceEmbed);
+      message.reply({ embeds: [balanceEmbed], allowedMentions: { repliedUser: false } });
     }
   },
 };

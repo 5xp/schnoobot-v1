@@ -38,7 +38,7 @@ module.exports = {
       .addField("**New Balance**", numeral(balance - transfer).format("$0,0.00"), true)
       .addField(`**${transferee.displayName}'s Balance**`, numeral(transferee_balance + transfer).format("$0,0.00"), true);
 
-    message.channel.send(transferEmbed);
+    message.reply({ embeds: [transferEmbed], allowedMentions: { repliedUser: false } });
 
     AwardPoints(message.author, -transfer);
     AwardPoints(transferee, transfer);

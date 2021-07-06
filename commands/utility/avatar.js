@@ -25,6 +25,6 @@ module.exports = {
       .setImage(desiredMember.user.avatarURL(avatarFormat))
       .setFooter(`Requested by ${message.member.displayName}`, message.member.user.avatarURL(avatarFormat));
 
-    message.channel.send(avatarEmbed);
+    message.reply({ embeds: [avatarEmbed], allowedMentions: { repliedUser: false } });
   },
 };

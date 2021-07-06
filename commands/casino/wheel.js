@@ -56,7 +56,7 @@ module.exports = {
     const str = `${clr} ${digits}`;
 
     wheelEmbed.setDescription(str);
-    message.channel.send(wheelEmbed);
+    message.reply({ embeds: [wheelEmbed], allowedMentions: { repliedUser: false } });
   },
 };
 

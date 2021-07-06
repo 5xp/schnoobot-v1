@@ -19,7 +19,7 @@ module.exports = {
       }
 
       const topEmbed = new MessageEmbed().setColor("#80ff80").addFields({ name: `Top ${j} streaks`, value: str });
-      message.channel.send(topEmbed);
+      message.reply({ embeds: [topEmbed], allowedMentions: { repliedUser: false } });
     } else {
       let data = await GetDaily(message.member);
       let dailyEmbed = new MessageEmbed();
@@ -71,7 +71,7 @@ module.exports = {
 
       dailyEmbed.setTitle(`Daily Reward`).addFields(fields);
 
-      message.channel.send(dailyEmbed);
+      message.reply({ embeds: [dailyEmbed], allowedMentions: { repliedUser: false } });
     }
   },
 };

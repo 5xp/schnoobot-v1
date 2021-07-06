@@ -63,6 +63,6 @@ module.exports = {
 
     flipEmbed.setDescription(str);
 
-    message.channel.send(flipEmbed);
+    message.reply({ embeds: [flipEmbed], allowedMentions: { repliedUser: false } });
   },
 };

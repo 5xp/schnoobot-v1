@@ -23,7 +23,7 @@ module.exports = {
 
     if (!args.length) {
       let InitialEmbed = new Discord.MessageEmbed().setColor("#6a00ff").setDescription(`🕑 You will have ${t} seconds to finish this prompt.`);
-      message.channel.send(InitialEmbed).then(countdown());
+      message.channel.send({ embed: [InitialEmbed] }).then(countdown());
     } else {
       switch (args[0]) {
         case "top":
@@ -48,7 +48,7 @@ module.exports = {
           finished = true;
           setTimeout(() => {
             let PromptEmbed = new Discord.MessageEmbed().setColor("#2af7ed").setDescription(currentPrompt.replace(/ /g, " \u200B"));
-            msg.edit(PromptEmbed).then(StartGame());
+            msg.edit({ embeds: [PromptEmbed] }).then(StartGame());
           }, 1000);
         }
 
@@ -116,7 +116,7 @@ module.exports = {
         .addField("**Errors**", distance, true)
         .addField("**Best WPM**", pb, true);
 
-      message.channel.send(summaryEmbed);
+      message.channel.send({ embeds: [summaryEmbed] });
     }
 
     async function ShowStats(user) {
@@ -152,7 +152,7 @@ module.exports = {
           .addField("**Average WPM**", (index[i].wpmsum / index[i].gamesplayed).toFixed(1));
       }
 
-      message.channel.send(statEmbed);
+      message.reply({ embeds: [statEmbed], allowedMentions: { repliedUser: false } });
     }
   },
 };
