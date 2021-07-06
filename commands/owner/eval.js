@@ -15,12 +15,12 @@ module.exports = {
       if (cleaned.length > 2000) {
         const buffer = Buffer.from(cleaned, "utf-8");
         const attachment = new MessageAttachment(buffer, "response.xl");
-        message.channel.send(attachment);
+        message.reply({ files: [attachment], allowedMentions: { repliedUser: false } });
       } else {
-        message.channel.send(cleaned, { code: "xl" });
+        message.reply({ content: `\`\`\`xl\n${cleaned}\`\`\``, allowedMentions: { repliedUser: false } });
       }
     } catch (err) {
-      message.channel.send(`\`ERROR\` \`\`\`xl\n${clean(err)}\n\`\`\``);
+      message.reply({ content: `\`ERROR\` \`\`\`xl\n${clean(err)}\n\`\`\``, allowedMentions: { repliedUser: false } });
     }
   },
 };
