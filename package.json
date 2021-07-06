@@ -11,7 +11,7 @@
   "dependencies": {
     "colors": "^1.4.0",
     "discord-buttons": "^3.2.1",
-    "discord.js": "^12.5.1",
+    "discord.js": "^13.0.0-dev.2e078e4.1625529824",
     "dotenv": "^8.2.0",
     "ffmpeg": "0.0.4",
     "get-audio-duration": "^2.0.3",

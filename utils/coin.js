@@ -7,7 +7,7 @@ const numeral = require("numeral");
 
 module.exports = {
   async HandleCoin(client) {
-    client.on("message", message => {
+    client.on("messageCreate", message => {
       if (/^[a-z]/i.test(message.content) && message.content.split(" ").length > 1) {
         ActivityPoints(message.author);
       }
