@@ -13,51 +13,60 @@ module.exports = {
   name: ["dl", "download", "tiktok", "youtube", "video"],
   description: "download and send videos",
   usage: `${process.env.PREFIX}dl <url>`,
-  category: "Utility",
-  async execute(message, args, silent = false) {
-    if (!args[0]) {
-      message.reply(`invalid arguments!`);
-      return;
+  options: [{ name: "url", type: "STRING", description: "the URL to download from", required: true }],
+  async execute(interaction, args, silent) {
+    if (silent !== true) silent = false;
+    let url;
+
+    const isSlash = interaction?.type === "APPLICATION_COMMAND";
+
+    if (isSlash) {
+      url = interaction.options.get("url").value;
+    } else {
+      if (!args[0]) {
+        return interaction.reply(`To use this command: \`${module.exports.usage}\``);
+      }
+
+      url = args.shift().replace(/[<>]/g, "");
+      interaction.react("861916931367108608");
     }
 
-    const url = args.shift().replace(/[<>]/g, "");
     const dir = `${process.cwd()}/temp`;
 
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir);
     }
 
-    console.log(`${message.author.username} is downloading a video from ${url}`.yellow);
-    message.channel.startTyping();
+    interaction.defer?.();
 
-    var options = ["-o", `${dir}/${message.id}.%(ext)s`, `${format1}/${format2}/${format3}/best[ext=mp4][filesize<200M]/bestvideo+bestaudio/best`];
+    var options = ["-o", `${dir}/${interaction.id}.%(ext)s`, `${format1}/${format2}/${format3}/best[ext=mp4][filesize<200M]/bestvideo+bestaudio/best`];
     // options = options.concat(args);
 
     youtubedl.exec(url, options, {}, async (err, output) => {
       if (err) {
         console.log(err);
         const err_str = err.stderr.match(/^ERROR.*$/gm);
-        message.channel.stopTyping();
-        return message.reply(err_str.join("\n"));
+
+        if (silent) return interaction.react("🚫");
+        else if (isSlash) return interaction.editReply(`\`\`\`${err_str.join("\n")}\`\`\``);
+        return interaction.reply(`\`\`\`${err_str.join("\n")}\`\`\``);
       }
 
-      console.log(output.join("\n"));
-
-      var filename = fs.readdirSync(dir).filter(file => file.startsWith(message.id))[0];
-      var ext = filename.slice(message.id.length + 1);
+      var filename = fs.readdirSync(dir).filter(file => file.startsWith(interaction.id))[0];
+      var ext = filename.slice(interaction.id.length + 1);
       let path = `${dir}/${filename}`;
       const originalpath = path;
 
       const stats = fs.statSync(path);
       const megabytes = stats.size / (1024 * 1024);
 
-      const tier = message.guild?.premiumTier || 1;
+      const tier = interaction.member.guild.premiumTier || 1;
       let maxFilesize;
       switch (tier) {
-        case 2:
+        case "TIER_2":
           maxFilesize = 50;
           break;
-        case 3:
+        case "TIER_3":
           maxFilesize = 100;
           break;
         default:
@@ -66,19 +75,26 @@ module.exports = {
 
       if (megabytes > maxFilesize) {
         console.log(`Filesize is greater than ${maxFilesize} megabytes! (${megabytes.toFixed(2)} MB)`.red);
-        var msg = await message.channel.send(`Compressing file... (${megabytes.toFixed(2)} MB)`);
-        await compress(`${dir}/${message.id}`, ext, maxFilesize);
-        path = `${dir}/${message.id}_new.${ext}`;
+        if (!silent) var msg = await interaction.channel.send(`Compressing file... (${megabytes.toFixed(2)} MB)`);
+        else interaction.react("⚠️");
+
+        await compress(`${dir}/${interaction.id}`, ext, maxFilesize);
+        path = `${dir}/${interaction.id}_new.${ext}`;
       }
 
       const attachment = new Discord.MessageAttachment(path);
-      await message.reply(attachment).catch(error => {
-        if (!silent) message.reply(error.message);
-      });
+
+      if (isSlash) {
+        console.log(attachment);
+        await interaction.editReply({ files: [attachment] });
+      } else {
+        await interaction.reply({ files: [attachment], allowedMentions: { repliedUser: false } }).catch(error => {
+          if (!silent) interaction.reply(error.message);
+          else interaction.react("🚫");
+        });
+      }
 
       if (msg) msg.delete();
-
-      message.channel.stopTyping();
 
       fs.unlink(path, error => {
         if (error) throw error;
