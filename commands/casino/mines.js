@@ -1,5 +1,4 @@
-const { MessageButton, MessageActionRow } = require("discord-buttons");
-const { MessageEmbed } = require("discord.js");
+const { MessageEmbed, MessageButton, MessageActionRow } = require("discord.js");
 const numeral = require("numeral");
 const { AwardPoints, GetUserData } = require("../../utils/coin");
 
@@ -7,12 +6,12 @@ const columns = 5;
 const rows = 5;
 
 // beginning state of all buttons
-const hiddenButton = new MessageButton().setLabel(" ").setStyle("gray").setID("hiddenButton");
+const hiddenButton = new MessageButton().setLabel(" ").setStyle("SECONDARY").setCustomId("hiddenButton");
 // revealed gem
-const gemButton = new MessageButton().setEmoji("💎").setStyle("blurple").setID("gemButton"); //.setDisabled(true);
+const gemButton = new MessageButton().setEmoji("💎").setStyle("PRIMARY").setCustomId("gemButton"); //.setDisabled(true);
 // revealed mine
-const mineButton = new MessageButton().setEmoji("💣").setStyle("red").setID("mineButton"); //.setDisabled(true);
-const cashoutButton = new MessageButton().setLabel("Cash out").setStyle("green").setID("cashoutButton");
+const mineButton = new MessageButton().setEmoji("💣").setStyle("DANGER").setCustomId("mineButton"); //.setDisabled(true);
+const cashoutButton = new MessageButton().setLabel("Cash out").setStyle("SUCCESS").setCustomId("cashoutButton");
 
 module.exports = {
   name: "mines",
@@ -58,7 +57,7 @@ module.exports = {
       grid[i][j].mine = true;
     }
 
-    // create discord buttons
+    // create array of MessageActionRows
     var buttonRows = createButtonGrid(rows, columns, grid);
 
     let [, , nextProfit, nextMult, winOdds] = calculateMultiplier(numMines, wager);
@@ -66,26 +65,26 @@ module.exports = {
     let minesEmbed = new MessageEmbed()
       .setTitle("💣 Mines")
       .setColor("#ffffff")
-      .addField("**Mines**", numMines, true)
+      .addField("**Mines**", numMines.toString(), true)
       .addField("**Total Profit**", `${numeral(0).format("$0,0.00")} (1.00x)`, true)
       .addField("**Profit on Next Tile**", `${numeral(nextProfit).format("$0,0.00")} (${nextMult.toFixed(2)}x)`, true)
       .addField("**Win % of Next Tile**", `${numeral(winOdds).format("0.00%")}`, true);
 
-    const msg = await message.channel.send({ components: buttonRows, embed: minesEmbed });
+    const msg = await message.reply({ components: buttonRows, embeds: [minesEmbed], allowedMentions: { repliedUser: false } });
 
     // have to send a second message for the 26th button
     // send a 1x1 image to get a small gap
-    const msg2 = await message.channel.send({ buttons: cashoutButton, files: ["https://cdn.discordapp.com/attachments/793778786943762434/858505668481515540/image.png"] });
+    const msg2 = await message.channel.send({ components: [[cashoutButton]], files: ["https://cdn.discordapp.com/attachments/793778786943762434/858505668481515540/image.png"] });
 
-    const btnFilter = button => button.clicker.user.id === message.author.id;
-    const btnCollector = msg.createButtonCollector(btnFilter);
-    const cashoutCollector = msg2.createButtonCollector(btnFilter);
+    const btnFilter = button => button.user.id === message.author.id;
+    const btnCollector = msg.createMessageComponentCollector(btnFilter);
+    const cashoutCollector = msg2.createMessageComponentCollector(btnFilter);
 
     let cellsRevealed = 0;
 
     btnCollector.on("collect", button => {
-      const row = Math.floor(button.id / rows);
-      const col = button.id % rows;
+      const row = Math.floor(button.customId / rows);
+      const col = button.customId % rows;
       if (!grid[row][col].revealed) {
         grid[row][col].reveal();
       } else {
@@ -101,7 +100,7 @@ module.exports = {
           .setTitle("💣 Mines")
           .setDescription("**You lost!**")
           .setColor("ff0000")
-          .addField("**Mines**", numMines, true)
+          .addField("**Mines**", numMines.toString(), true)
           .addField("**Profit**", numeral(-wager).format("$0,0.00"), true)
           .addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true);
 
@@ -128,7 +127,7 @@ module.exports = {
           minesEmbed = new MessageEmbed()
             .setTitle("💣 Mines")
             .setColor("#ffffff")
-            .addField("**Mines**", numMines, true)
+            .addField("**Mines**", numMines.toString(), true)
             .addField("**Total Profit**", `${numeral(currentProfit).format("$0,0.00")} (${currentMult}x)`, true)
             .addField("**Profit on Next Tile**", `${numeral(nextProfit).format("$0,0.00")} (${nextMult.toFixed(2)}x)`, true)
             .addField("**Win % of Next Tile**", `${numeral(winOdds).format("0.00%")}`, true);
@@ -136,11 +135,11 @@ module.exports = {
       }
 
       buttonRows = createButtonGrid(rows, columns, grid);
-      msg.edit({ components: buttonRows, embed: minesEmbed });
+      button.update({ components: buttonRows, embeds: [minesEmbed] });
     });
 
     cashoutCollector.on("collect", button => {
-      if (button.id === "cashoutButton") {
+      if (button.customId === "cashoutButton") {
         cashoutCollector.stop();
         btnCollector.stop();
         revealGrid(grid);
@@ -156,7 +155,8 @@ module.exports = {
           AwardPoints(message.author, currentProfit);
 
           buttonRows = createButtonGrid(rows, columns, grid);
-          msg.edit({ components: buttonRows, embed: minesEmbed });
+          button.deferUpdate();
+          msg.edit({ components: buttonRows, embeds: [minesEmbed] });
         } else {
           minesEmbed = new MessageEmbed()
             .setTitle("💣 Mines")
@@ -165,7 +165,8 @@ module.exports = {
             .addField("**Balance**", numeral(balance).format("$0,0.00"), true);
 
           buttonRows = createButtonGrid(rows, columns, grid);
-          msg.edit({ components: buttonRows, embed: minesEmbed });
+          button.deferUpdate();
+          msg.edit({ components: buttonRows, embeds: [minesEmbed] });
         }
       }
     });
@@ -192,20 +193,20 @@ Cell.prototype.buttonState = function () {
   if (this.revealed) {
     if (this.mine) {
       let button = mineButton;
-      button.setID(this.x * columns + this.y);
+      button.setCustomId(`${this.x * columns + this.y}`);
       if (this.disabled) button.setDisabled(true);
       else button.setDisabled(false);
       return button;
     } else {
       let button = gemButton;
-      button.setID(this.x * columns + this.y);
+      button.setCustomId(`${this.x * columns + this.y}`);
       if (this.disabled) button.setDisabled(true);
       else button.setDisabled(false);
       return button;
     }
   } else {
     let button = hiddenButton;
-    button.setID(this.x * columns + this.y);
+    button.setCustomId(`${this.x * columns + this.y}`);
     return button;
   }
 };
@@ -221,7 +222,7 @@ function createButtonGrid(rows, columns, grid) {
   for (var i = 0; i < rows; i++) {
     buttonRows[i] = new MessageActionRow();
     for (var j = 0; j < columns; j++) {
-      buttonRows[i].addComponent(grid[i][j].buttonState());
+      buttonRows[i].addComponents([grid[i][j].buttonState()]);
     }
   }
   return buttonRows;
