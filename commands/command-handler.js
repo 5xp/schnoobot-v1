@@ -25,10 +25,10 @@ module.exports = client => {
 
   readCommands("");
 
-  client.on("message", async message => {
+  client.on("messageCreate", async message => {
     if (message.author.bot) return;
     const { member, content, guild } = message;
-    const prefix = await getPrefix(guild.id);
+    const prefix = await getPrefix(guild?.id);
 
     if (content.startsWith(prefix)) {
       for (const command of client.commands) {
