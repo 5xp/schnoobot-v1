@@ -44,7 +44,7 @@ module.exports = {
     interaction.defer?.();
 
     var options = ["-o", `${dir}/${interaction.id}.%(ext)s`, `${format1}/${format2}/${format3}/best[ext=mp4][filesize<200M]/bestvideo+bestaudio/best`];
-    if (interaction?.options.get("audioonly").value) options = options.concat("--extract-audio", "--audio-format=mp3");
+    if (interaction?.options?.get("audioonly")?.value) options = options.concat("--extract-audio", "--audio-format=mp3");
 
     youtubedl.exec(url, options, {}, async (err, output) => {
       if (err) {
@@ -115,7 +115,7 @@ module.exports = {
       const attachment = new Discord.MessageAttachment(path).setName(`video.${ext}`);
 
       if (isSlash) {
-        await interaction.editReply({ files: [attachment] }).catch(async error => {
+        await interaction.editReply({ content: null, files: [attachment] }).catch(async error => {
           await interaction.editReply({ content: "🚫 **Download failed!**", ephemeral: false });
           await interaction.followUp({ content: `\`\`\`${error.message}\`\`\``, ephemeral: true });
         });
