@@ -29,8 +29,15 @@ function FindVC(input, message) {
   // search cache with id
   let vc = message.guild.channels.cache.get(input);
 
+  if (!vc) {
+    const matches = input.match(/^<#(\d+)>$/);
+    if (matches) {
+      vc = message.guild.channels.cache.get(matches[1]);
+    }
+  }
+
   // search cache with name
-  if (vc == null) {
+  if (!vc) {
     vc = message.guild.channels.cache.filter(channel => channel.name.toLowerCase().includes(input) && channel.type === "voice").first();
   }
   return vc;

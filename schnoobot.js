@@ -5,7 +5,7 @@ const { Client } = require("discord.js");
 const mongo = require("./utils/mongo.js");
 const { HandleCoin } = require("./utils/coin");
 
-const client = new Client({ intents: ["GUILDS", "GUILD_MEMBERS", "GUILD_MESSAGES", "DIRECT_MESSAGES", "GUILD_EMOJIS", "GUILD_MESSAGE_REACTIONS"], partials: ["CHANNEL"] });
+const client = new Client({ intents: ["GUILDS", "GUILD_MEMBERS", "GUILD_VOICE_STATES", "GUILD_MESSAGES", "DIRECT_MESSAGES", "GUILD_EMOJIS", "GUILD_MESSAGE_REACTIONS"], partials: ["CHANNEL"] });
 
 client.once("ready", async () => {
   console.log(`Schnoobot is online!`.blue);
