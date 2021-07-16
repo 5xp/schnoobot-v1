@@ -2,6 +2,7 @@ const { MessageEmbed, MessageButton, MessageActionRow } = require("discord.js");
 
 // TODO rules settings
 // TODO create unique lobby code
+// TODO quit
 
 module.exports = {
   name: "uno",
@@ -47,7 +48,7 @@ module.exports = {
 
         const player = new Player(players.length, i.member.user);
         players.push(player);
-        player.setCollector(dmMsg);
+        player.setMsg(dmMsg);
 
         lobbyEmbed.fields[0].value = players.map(player => `*${player.name}*`).join("\n");
         lobbyEmbed.setFooter(`${players.length} players`);
@@ -121,70 +122,67 @@ async function startGame(players, options, callback) {
     drawCard(player.hand, 7);
   }
 
-  // send a message and collect buttons from each player
-  for (var i = 0; i < players.length; i++) {
-    const player = players[i];
+  // edit the dm
+  for (const player of players) {
+    await player.message.edit({ content: handEmojis(player.hand), embeds: [createUnoEmbed(player)], components: createActionRows(player) });
+  }
 
-    const msg = await player.collector.edit({ content: handEmojis(player.hand), embeds: [createUnoEmbed(player)], components: createActionRows(player) });
+  startTurn(players[iTurn]);
 
-    // attach collector to player object so it can be updated later
-    const collector = await msg.createMessageComponentCollector();
-    player.setCollector(collector);
+  async function startTurn(player) {
+    const i = await player.message.awaitMessageComponent();
+    if (i.customId == "draw") {
+      const drawnCard = drawCard(player.hand);
 
-    collector.on("collect", async i => {
-      if (i.customId == "draw") {
-        const drawnCard = drawCard(player.hand);
+      // check if drawn card is playable and play it
+      if (drawnCard.playable(topCard())) {
+        player.hand.pop();
+        await playSpecial(drawnCard, i);
+        discarded.push(drawnCard);
 
-        // check if drawn card is playable and play it
-        if (drawnCard.playable(topCard())) {
-          player.hand.pop();
-          await playSpecial(drawnCard, i);
-          discarded.push(drawnCard);
+        if (!drawnCard.isWild()) history.push(`${player.name} drew and played ${drawnCard.label()}`);
+        else history.push(`${player.name} drew and played ${drawnCard.face}`);
+      } else history.push(`${player.name} drew a card`);
+      if (drawnCard.isWild()) return;
+    } else if (i.customId.startsWith("wild")) {
+      // handles wildcard color picking
+      topCard().color = i.customId.substr(4);
+      history.push(`${player.name} changed the color to ${topCard().color}`);
+    } else {
+      const card = player.hand[i.customId];
+      player.hand.splice(i.customId, 1);
+      await playSpecial(card, i);
+      discarded.push(card);
 
-          if (!drawnCard.isWild()) history.push(`${player.name} drew and played ${drawnCard.label()}`);
-          else history.push(`${player.name} drew and played ${drawnCard.face}`);
-        } else history.push(`${player.name} drew a card`);
-        if (drawnCard.isWild()) return;
-      } else if (i.customId.startsWith("wild")) {
-        // handles wildcard color picking
-        topCard().color = i.customId.substr(4);
-        history.push(`${player.name} changed the color to ${topCard().color}`);
-      } else {
-        const card = player.hand[i.customId];
-        player.hand.splice(i.customId, 1);
-        await playSpecial(card, i);
-        discarded.push(card);
+      // let player pick a color
+      if (card.isWild()) {
+        history.push(`${player.name} played ${card.face}`);
+        return;
+      } else history.push(`${player.name} played ${card.label()}`);
+    }
 
-        // let player pick a color
-        if (card.isWild()) {
-          history.push(`${player.name} played ${card.face}`);
-          return;
-        } else history.push(`${player.name} played ${card.label()}`);
+    if (player.hand.length === 0) {
+      // player wins
+      isGameOver = true;
+      winner = player;
+    }
+
+    // advance turn and update each player
+    iTurn = nextTurn();
+
+    await i.update({ content: handEmojis(player.hand), embeds: [createUnoEmbed(player)], components: createActionRows(player) });
+
+    for (const p of players) {
+      if (p !== player) {
+        p.message.edit({ content: handEmojis(p.hand), embeds: [createUnoEmbed(p)], components: createActionRows(p) });
       }
+    }
 
-      if (player.hand.length === 0) {
-        // player wins
-        isGameOver = true;
-        winner = player;
-      }
-
-      // advance turn and update each player
-      iTurn = nextTurn();
-
-      // update button user first so interaction doesn't fail
-      await i.update({ content: handEmojis(player.hand), embeds: [createUnoEmbed(player)], components: createActionRows(player) });
-
-      for (const p of players) {
-        if (p !== player) {
-          p.collector.message.edit({ content: handEmojis(p.hand), embeds: [createUnoEmbed(p)], components: createActionRows(p) });
-        }
-        if (isGameOver) p.collector.stop();
-      }
-      if (isGameOver) {
-        collector.stop();
-        callback(winner);
-      }
-    });
+    if (isGameOver) {
+      callback(winner);
+    } else {
+      startTurn(players[iTurn]);
+    }
   }
 
   // handles special cards
@@ -212,6 +210,7 @@ async function startGame(players, options, callback) {
         break;
 
       case "+4":
+        const currentTurn = iTurn;
         if (players[nextTurn()].hand.map(card => card.face).includes("+4")) {
           nStacked++;
         } else {
@@ -220,11 +219,14 @@ async function startGame(players, options, callback) {
           nStacked = 0;
           iTurn = nextTurn();
         }
+        // restart the turn so player can pick a color
         await i.update({ components: [wildCardRow()] });
+        startTurn(players[currentTurn]);
         break;
 
       case "Wildcard":
         await i.update({ components: [wildCardRow()] });
+        startTurn(players[iTurn]);
         break;
     }
   }
@@ -369,11 +371,11 @@ function Player(i, user) {
   this.id = this.user.id;
   this.name = this.user.username;
   this.hand = [];
-  this.collector;
+  this.message;
 }
 
-Player.prototype.setCollector = function (c) {
-  this.collector = c;
+Player.prototype.setMsg = function (m) {
+  this.message = m;
 };
 
 function wildCardRow() {
