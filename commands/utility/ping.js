@@ -1,7 +1,7 @@
 module.exports = {
   name: "ping",
   description: "ping command",
-  category: "Utility",
+  slash: true,
   execute(message, args) {
     message.reply("pong!");
   },

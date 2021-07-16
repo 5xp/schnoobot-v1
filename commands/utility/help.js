@@ -7,9 +7,12 @@ module.exports = {
   name: ["help", "h"],
   description: "help",
   usage: `${process.env.PREFIX}help <command?>`,
-  category: "Utility",
-  async execute(message, args) {
-    let { client } = message;
+  slash: true,
+  options: [{ name: "command", type: "STRING", description: "get detailed help for a specific command", required: false }],
+  async execute(interaction, args) {
+    const isSlash = interaction.isCommand?.();
+    const isOwner = isSlash ? interaction.user.id === interaction.client.application.owner.id : interaction.author.id === interaction.client.application.owner.id;
+    let { client } = interaction;
     let currentPage = 0;
     let cmdlist = {};
 
@@ -25,7 +28,7 @@ module.exports = {
           let { name, description = "", disabled = false, hidden = false } = command;
 
           if (!disabled && !hidden) {
-            if (category === "owner" && message.author.id !== process.env.OWNERID) return; // only show owner page to owner
+            if (category === "owner" && !isOwner) return; // only show owner page to owner
             if (!(category in cmdlist)) {
               cmdlist[category] = [];
             }
@@ -37,13 +40,18 @@ module.exports = {
 
     readCommands("../");
 
-    if (!args[0]) {
+    if (isSlash ? !interaction.options.get("command")?.value : !args[0]) {
+      await interaction.defer?.();
+
       const leftButton = new MessageButton().setEmoji("◀").setStyle("PRIMARY").setCustomId("left");
       const rightButton = new MessageButton().setEmoji("▶").setStyle("PRIMARY").setCustomId("right");
+      const msgObject = () => {
+        return { components: [[leftButton, rightButton]], embeds: [GetEmbedGeneric(currentPage)] };
+      };
 
-      const msg = await message.channel.send({ components: [[leftButton, rightButton]], embeds: [GetEmbedGeneric(currentPage)] });
+      const msg = isSlash ? await interaction.editReply(msgObject()) : await interaction.reply(msgObject());
 
-      const filter = button => button.user.id === message.author.id;
+      const filter = button => button.user.id === interaction.author.id;
 
       const collector = msg.createMessageComponentCollector(filter, { time: 30000 });
 
@@ -51,18 +59,18 @@ module.exports = {
         if (button.customId === "right") {
           currentPage++;
           currentPage = Math.min(currentPage, Object.keys(cmdlist).length - 1);
-          button.update({ components: [[leftButton, rightButton]], embeds: [GetEmbedGeneric(currentPage)] });
+          button.update(msgObject());
         } else {
           currentPage--;
           currentPage = Math.max(currentPage, 0);
-          msg.edit({ components: [[leftButton, rightButton]], embeds: [GetEmbedGeneric(currentPage)] });
+          button.update(msgObject());
         }
       });
     } else {
-      let desiredCmd = args[0].toLowerCase();
+      let desiredCmd = isSlash ? interaction.options.get("command").value.toLowerCase() : args[0].toLowerCase();
       let embed = GetEmbedSpecific(desiredCmd);
-      if (embed !== undefined) message.channel.send({ embeds: [embed] });
-      else message.reply("invalid arguments!");
+      if (embed) interaction.reply({ embeds: [embed] });
+      else interaction.reply("invalid command!");
     }
 
     function GetEmbedGeneric(page) {
@@ -85,10 +93,10 @@ module.exports = {
       helpEmbed
         .setColor("#f03e1f")
         .setTitle(`Showing details for ${process.env.PREFIX}${cmd.name[0] || cmd.name}`)
-        .setDescription(cmd.description);
+        .addField("**Description**", cmd.description);
       if (cmd.usage) helpEmbed.addField("**Usage**", `\`${cmd.usage}\``, true);
       if (cmd.alias) helpEmbed.addField("**Aliases**", cmd.alias.join(", "));
-      if (cmd.required_perms) helpEmbed.addField("**Permissions required**", cmd.required_perms.join(", "));
+      if (cmd.required_perms) helpEmbed.addField("**Permissions required**", cmd.required_perms.map(cmd => `\`${cmd}\``).join(", "));
 
       return helpEmbed;
     }
