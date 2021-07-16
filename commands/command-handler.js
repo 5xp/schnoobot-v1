@@ -32,19 +32,17 @@ module.exports = client => {
 
     if (content.startsWith(prefix)) {
       for (const command of client.commands) {
-        let { name, description = "", usage = "", disabled = false, hidden = false, required_perms = [], execute } = command;
+        let { name, disabled = false, required_perms = [], execute } = command;
 
         for (const alias of name) {
           if (content.toLowerCase().split(" ")[0] === `${prefix}${alias.toLowerCase()}`) {
-            for (const permission of required_perms) {
-              // TODO: list missing permissions
-              if (!member.permissions.has(permission)) {
-                return message.reply(`missing permissions!`);
-              }
+            const missing_perms = required_perms.filter(permission => !member.permissions.has(permission));
+            if (missing_perms.length) {
+              return message.reply({ content: `You are missing permissions: ${missing_perms.map(p => `\`${p}\``).join(", ")}` });
             }
 
             if (disabled) {
-              return message.reply("this command is disabled!");
+              return message.reply("This command is disabled!");
             }
 
             const args = content.split(/[ ]+/);
@@ -65,7 +63,17 @@ module.exports = client => {
 
   client.on("interactionCreate", interaction => {
     if (interaction.isCommand()) {
-      client.commands.find(cmd => cmd.name.includes(interaction.commandName)).execute(interaction);
+      const command = client.commands.find(cmd => cmd.name.includes(interaction.commandName));
+      let { disabled = false, required_perms = [], execute } = command;
+
+      const missing_perms = required_perms.filter(permission => !interaction.member.permissions.has(permission));
+      if (missing_perms.length) {
+        return interaction.reply({ content: `You are missing permissions: ${missing_perms.map(p => `\`${p}\``).join(", ")}`, ephemeral: true });
+      }
+
+      if (disabled) return interaction.reply({ content: "This command is disabled!", ephemeral: true });
+
+      command.execute(interaction);
     }
   });
 };
