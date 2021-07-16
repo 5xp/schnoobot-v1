@@ -33,15 +33,19 @@ module.exports = {
     }
 
     async function setCommands(commandManager) {
-      const appCommands = await commandManager.set(cmds);
+      // if not deployed to guild don't bother with commands that use permissions
+      const appCommands = await commandManager.set(commandManager?.guild ? cmds : cmds.filter(cmd => !cmd.permissions.length));
 
       // for some reason we can only set permissions after setting the commands
-      const fullPermissions = appCommands.map(appCommand => {
-        const permissions = cmds.find(cmd => cmd.name === appCommand.name).permissions;
-        return { id: appCommand.id, permissions };
-      });
-
-      await commandManager.permissions.set({ fullPermissions });
+      if (commandManager?.guild) {
+        const fullPermissions = appCommands
+          .map(appCommand => {
+            const permissions = cmds.find(cmd => cmd.name === appCommand.name).permissions;
+            return { id: appCommand.id, permissions };
+          })
+          .filter(appCommand => appCommand.permissions.length);
+        await commandManager.permissions.set({ fullPermissions });
+      }
     }
   },
 };
