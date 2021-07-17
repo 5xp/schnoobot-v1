@@ -118,7 +118,11 @@ async function GetDaily(user) {
   }
 }
 
+// returns true if daily is available, otherwise return how long until daily is available in ms
 function dailyIn(lastdaily) {
   let time = lastdaily + 1000 * 60 * 60 * 18 - Date.now();
-  return Date.now() - lastdaily > 1000 * 60 * 60 * 18 || !time || !lastdaily ? true : time;
+  if (Date.now() - lastdaily > 1000 * 60 * 60 * 18) return true;
+  if (!time) return true;
+  if (!lastdaily) return true;
+  else return time;
 }
