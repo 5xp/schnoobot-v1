@@ -74,7 +74,10 @@ module.exports = {
 
     // have to send a second message for the 26th button
     // send a 1x1 image to get a small gap
-    const msg2 = await message.channel.send({ components: [[cashoutButton]], files: ["https://cdn.discordapp.com/attachments/793778786943762434/858505668481515540/image.png"] });
+    const msg2 = await message.channel.send({
+      components: [{ type: 1, components: [cashoutButton] }],
+      files: ["https://cdn.discordapp.com/attachments/793778786943762434/858505668481515540/image.png"],
+    });
 
     const btnFilter = button => button.user.id === message.author.id;
     const btnCollector = msg.createMessageComponentCollector(btnFilter);

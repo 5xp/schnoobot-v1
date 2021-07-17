@@ -30,7 +30,7 @@ module.exports = {
         if (interaction.isCommand?.()) {
           const msg = await interaction.editReply({
             content: "⚠ **Response is too large - cannot respond ephemerally**",
-            components: [[new MessageButton().setLabel("Send anyway").setStyle("DANGER").setCustomId("send")]],
+            components: [{ type: 1, components: [new MessageButton().setLabel("Send anyway").setStyle("DANGER").setCustomId("send")] }],
           });
 
           msg.awaitMessageComponent({ time: 15000 }).then(async i => {

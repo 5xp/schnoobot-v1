@@ -46,7 +46,7 @@ module.exports = {
       const leftButton = new MessageButton().setEmoji("◀").setStyle("PRIMARY").setCustomId("left");
       const rightButton = new MessageButton().setEmoji("▶").setStyle("PRIMARY").setCustomId("right");
       const msgObject = () => {
-        return { components: [[leftButton, rightButton]], embeds: [GetEmbedGeneric(currentPage)] };
+        return { components: [{ type: 1, components: [leftButton, rightButton] }], embeds: [GetEmbedGeneric(currentPage)] };
       };
 
       const msg = isSlash ? await interaction.editReply(msgObject()) : await interaction.reply(msgObject());
