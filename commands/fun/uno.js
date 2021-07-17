@@ -93,7 +93,7 @@ module.exports = {
       else lobbyMsg = await interaction.reply({ embeds: [lobbyEmbed], components: [{ type: 1, components: [joinButton] }] });
 
       const filter = interaction => interaction.message.id === lobbyMsg.id;
-      const buttonCollector = lobbyMsg.createMessageComponentCollector({ filter, time: 600000 });
+      const buttonCollector = lobbyMsg.createMessageComponentCollector({ filter });
 
       lobbies.set(lobbyCode, { code: lobbyCode, players, msg: lobbyMsg, embed: lobbyEmbed, collector: buttonCollector, bStack, bDrawOne });
 
@@ -139,6 +139,11 @@ module.exports = {
           embed.setFooter(`${players.length} players`);
 
           msg.edit({ embeds: [embed], components: [{ type: 1, components: [joinButton] }] });
+          for (const p of players) {
+            if (p !== player) {
+              p.message.edit({ embeds: [embed], components: [{ type: 1, components: [startButton, leaveButton] }] });
+            }
+          }
 
           dmMsg.delete();
         } else {
