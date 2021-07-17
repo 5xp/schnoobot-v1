@@ -1,17 +1,39 @@
 const { MessageEmbed, MessageButton, MessageActionRow } = require("discord.js");
 
-// TODO rules settings
 // TODO create unique lobby code
 // TODO quit
+// TODO show players in dm pregame
 
 module.exports = {
   name: "uno",
   description: "starts an uno game",
   slash: true,
+  options: [
+    {
+      name: "stack",
+      type: "STRING",
+      description: "stack +2s on +2s and +4s on +4s (default: on)",
+      required: false,
+      choices: [
+        { name: "on", value: "1" },
+        { name: "off", value: "0" },
+      ],
+    },
+    {
+      name: "draw",
+      type: "STRING",
+      description: "draw one card and end turn or draw multiple until you can play (default: draw one)",
+      required: false,
+      choices: [
+        { name: "one", value: "1" },
+        { name: "multiple", value: "0" },
+      ],
+    },
+  ],
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
 
-    if (!interaction.inGuild?.()) {
+    if (!interaction.guild) {
       return interaction.reply("You must start a game in a guild!");
     }
 
@@ -22,13 +44,22 @@ module.exports = {
     // pre-game lobby
     const players = [];
 
-    const lobbyEmbed = new MessageEmbed().setTitle("Lobby").addField("Player List", `\u200B`).setFooter(`${players.length} players`).setColor("AQUA");
+    const bStack = !!+(interaction?.options?.get("stack")?.value ?? true);
+    const bDrawOne = !!+(interaction?.options?.get("draw")?.value ?? true);
+
+    console.log({ bStack, bDrawOne });
+    const lobbyEmbed = new MessageEmbed()
+      .setTitle("Lobby")
+      .addField("Player List", `\u200B`)
+      .setFooter(`${players.length} players`)
+      .setColor("AQUA")
+      .setDescription(`Stacking: ${bStack ? "on" : "off"} | Draw: ${bDrawOne ? "once" : "multiple"}`);
 
     await interaction.defer?.();
 
     let lobbyMsg;
-    if (isSlash) lobbyMsg = await interaction.editReply({ embeds: [lobbyEmbed], components: [[joinButton]] });
-    else lobbyMsg = await interaction.reply({ embeds: [lobbyEmbed], components: [[joinButton]] });
+    if (isSlash) lobbyMsg = await interaction.editReply({ embeds: [lobbyEmbed], components: [{ type: 1, components: [joinButton] }] });
+    else lobbyMsg = await interaction.reply({ embeds: [lobbyEmbed], components: [{ type: 1, components: [joinButton] }] });
 
     const filter = interaction => interaction.message.id === lobbyMsg.id;
     const buttonCollector = lobbyMsg.createMessageComponentCollector({ filter, time: 600000 });
@@ -44,7 +75,7 @@ module.exports = {
 
       try {
         await i.defer({ ephemeral: true });
-        const dmMsg = await i.user.send({ embeds: [new MessageEmbed().setColor("AQUA").setTitle("Waiting for players...")], components: [[startButton, leaveButton]] });
+        const dmMsg = await i.user.send({ embeds: [new MessageEmbed().setColor("AQUA").setTitle("Waiting for players...")], components: [{ type: 1, components: [startButton, leaveButton] }] });
 
         const player = new Player(players.length, i.member.user);
         players.push(player);
@@ -53,7 +84,7 @@ module.exports = {
         lobbyEmbed.fields[0].value = players.map(player => `*${player.name}*`).join("\n");
         lobbyEmbed.setFooter(`${players.length} players`);
 
-        lobbyMsg.edit({ embeds: [lobbyEmbed], components: [[joinButton]] });
+        lobbyMsg.edit({ embeds: [lobbyEmbed], components: [{ type: 1, components: [joinButton] }] });
         i.followUp({ content: `You have joined uno! Click here to open our DM: https://discord.com/channels/@me/${dmMsg.channel.id}`, ephemeral: true });
 
         // wait for start or leave button press
@@ -66,7 +97,7 @@ module.exports = {
           lobbyEmbed.fields[0].value = players.map(player => `*${player.name}*`).join("\n") || "\u200B";
           lobbyEmbed.setFooter(`${players.length} players`);
 
-          lobbyMsg.edit({ embeds: [lobbyEmbed], components: [[joinButton]] });
+          lobbyMsg.edit({ embeds: [lobbyEmbed], components: [{ type: 1, components: [joinButton] }] });
 
           dmMsg.delete();
         } else {
@@ -75,7 +106,7 @@ module.exports = {
           buttonCollector.stop();
           lobbyEmbed.setTitle("Game in progress");
           lobbyMsg.edit({ embeds: [lobbyEmbed], components: [] });
-          startGame(players, { bStack: interaction?.options.get?.("stack")?.value, bDrawOne: interaction?.options.get?.("draw")?.value }, winner => {
+          startGame(players, { bStack, bDrawOne: bDrawOne }, winner => {
             // game ended
             lobbyEmbed.setTitle(`${winner.name} won the game!`).setColor("ORANGE");
             lobbyMsg.edit({ embeds: [lobbyEmbed] });
@@ -94,7 +125,7 @@ module.exports = {
 };
 
 async function startGame(players, options, callback) {
-  const { bStack = true, bDrawOne = true } = options;
+  const { bStack, bDrawOne } = options;
 
   let iTurn = 0,
     isReverse = false,
@@ -142,7 +173,21 @@ async function startGame(players, options, callback) {
 
         if (!drawnCard.isWild()) history.push(`${player.name} drew and played ${drawnCard.label()}`);
         else history.push(`${player.name} drew and played ${drawnCard.face}`);
-      } else history.push(`${player.name} drew a card`);
+      } else {
+        history.push(`${player.name} drew a card`);
+
+        // if drawing multiple, restart turn
+        if (!bDrawOne) {
+          await i.update({ content: handEmojis(player.hand), embeds: [createUnoEmbed(player)], components: createActionRows(player) });
+          for (const p of players) {
+            if (p !== player) {
+              p.message.edit({ content: handEmojis(p.hand), embeds: [createUnoEmbed(p)], components: createActionRows(p) });
+            }
+          }
+          startTurn(player);
+          return;
+        }
+      }
       if (drawnCard.isWild()) return;
     } else if (i.customId.startsWith("wild")) {
       // handles wildcard color picking
@@ -199,7 +244,7 @@ async function startGame(players, options, callback) {
 
       case "+2":
         // check if next player has a +2
-        if (players[nextTurn()].hand.map(card => card.face).includes("+2")) {
+        if (players[nextTurn()].hand.map(card => card.face).includes("+2") && bStack) {
           nStacked++;
         } else {
           // if not, draw each +2 to next player
@@ -211,7 +256,7 @@ async function startGame(players, options, callback) {
 
       case "+4":
         const currentTurn = iTurn;
-        if (players[nextTurn()].hand.map(card => card.face).includes("+4")) {
+        if (players[nextTurn()].hand.map(card => card.face).includes("+4") && bStack) {
           nStacked++;
         } else {
           // if not, draw each +2 to next player
@@ -284,7 +329,7 @@ async function startGame(players, options, callback) {
       rows[i] = new MessageActionRow();
     }
 
-    const drawCardButton = new MessageButton().setLabel("Draw Card").setStyle("DANGER").setCustomId("draw").setDisabled(isTurn);
+    const drawCardButton = new MessageButton().setLabel("Draw").setStyle("PRIMARY").setCustomId("draw").setDisabled(isTurn);
     rows[0].addComponents([drawCardButton]);
 
     for (var j = 0; j < hand.length; j++) {
@@ -294,6 +339,8 @@ async function startGame(players, options, callback) {
       rows[r].addComponents([button]);
     }
 
+    // if player can stack, don't let them play anything else
+    if (nStacked > 0) rows.forEach(row => row.components.forEach(button => button.setDisabled(hand[button.customId]?.face !== topCard().face)));
     return rows;
   }
 
@@ -382,9 +429,15 @@ function wildCardRow() {
   const colors = ["Red", "Yellow", "Green", "Blue"];
   const wildRow = new MessageActionRow();
   for (color of colors) {
-    const button = new MessageButton().setLabel(color).setStyle("SECONDARY").setCustomId(`wild${color}`);
+    const button = new MessageButton()
+      .setStyle("PRIMARY")
+      .setCustomId(`wild${color}`)
+      .setEmoji(emojis[color[0].toLowerCase() + "b"]);
     wildRow.addComponents([button]);
   }
+
+  // const backButton = new MessageButton().setStyle("DANGER").setEmoji("🔙").setCustomId("back");
+  // wildRow.addComponents([backButton]);
   return wildRow;
 }
 
