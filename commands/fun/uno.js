@@ -1,8 +1,9 @@
 const { MessageEmbed, MessageButton, MessageActionRow } = require("discord.js");
 
-// TODO create unique lobby code
 // TODO quit
-// TODO show players in dm pregame
+// TODO public lobbies and lobby list?
+
+const lobbies = new Map();
 
 module.exports = {
   name: "uno",
@@ -10,106 +11,147 @@ module.exports = {
   slash: true,
   options: [
     {
-      name: "stack",
-      type: "STRING",
-      description: "stack +2s on +2s and +4s on +4s (default: on)",
-      required: false,
-      choices: [
-        { name: "on", value: "1" },
-        { name: "off", value: "0" },
+      name: "start",
+      type: "SUB_COMMAND",
+      description: "start a game of uno",
+      options: [
+        {
+          name: "stack",
+          type: "STRING",
+          description: "stack +2s on +2s and +4s on +4s (default: on)",
+          required: false,
+          choices: [
+            { name: "on", value: "1" },
+            { name: "off", value: "0" },
+          ],
+        },
+        {
+          name: "draw",
+          type: "STRING",
+          description: "draw one card and end turn or draw multiple until you can play (default: draw one)",
+          required: false,
+          choices: [
+            { name: "one", value: "1" },
+            { name: "multiple", value: "0" },
+          ],
+        },
       ],
     },
     {
-      name: "draw",
-      type: "STRING",
-      description: "draw one card and end turn or draw multiple until you can play (default: draw one)",
-      required: false,
-      choices: [
-        { name: "one", value: "1" },
-        { name: "multiple", value: "0" },
-      ],
+      name: "join",
+      type: "SUB_COMMAND",
+      description: "join a specific lobby",
+      options: [{ name: "lobby", type: "STRING", description: "the code of the lobby to join", required: true }],
     },
   ],
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
 
-    if (!interaction.guild) {
-      return interaction.reply("You must start a game in a guild!");
-    }
-
     const joinButton = new MessageButton().setStyle("PRIMARY").setLabel("Join").setCustomId("join");
     const startButton = new MessageButton().setStyle("SUCCESS").setLabel("Start Game").setCustomId("start");
     const leaveButton = new MessageButton().setStyle("DANGER").setLabel("Leave Game").setCustomId("leave");
 
-    // pre-game lobby
-    const players = [];
+    if (interaction?.options?.has("join")) {
+      const lobbyCode = interaction.options.get("join").options.get("lobby").value;
 
-    const bStack = !!+(interaction?.options?.get("stack")?.value ?? true);
-    const bDrawOne = !!+(interaction?.options?.get("draw")?.value ?? true);
+      if (!lobbies.has(lobbyCode)) {
+        return await interaction.reply({ content: "🚫 **Error: Invalid lobby code**", ephemeral: true });
+      }
 
-    console.log({ bStack, bDrawOne });
-    const lobbyEmbed = new MessageEmbed()
-      .setTitle("Lobby")
-      .addField("Player List", `\u200B`)
-      .setFooter(`${players.length} players`)
-      .setColor("AQUA")
-      .setDescription(`Stacking: ${bStack ? "on" : "off"} | Draw: ${bDrawOne ? "once" : "multiple"}`);
+      joinLobby(interaction, lobbies.get(lobbyCode));
+    } else {
+      if (!interaction.guild) {
+        return interaction.reply("You must start a game in a guild!");
+      }
 
-    await interaction.defer?.();
+      await interaction.defer?.();
 
-    let lobbyMsg;
-    if (isSlash) lobbyMsg = await interaction.editReply({ embeds: [lobbyEmbed], components: [{ type: 1, components: [joinButton] }] });
-    else lobbyMsg = await interaction.reply({ embeds: [lobbyEmbed], components: [{ type: 1, components: [joinButton] }] });
+      // pre-game lobby
+      const players = [];
 
-    const filter = interaction => interaction.message.id === lobbyMsg.id;
-    const buttonCollector = lobbyMsg.createMessageComponentCollector({ filter, time: 600000 });
+      const bStack = !!+(interaction?.options?.get("start")?.options?.get("stack")?.value ?? true);
+      const bDrawOne = !!+(interaction?.options?.get("start")?.options?.get("draw")?.value ?? true);
 
-    buttonCollector.on("collect", async i => {
-      playerJoin(i);
-    });
+      // create a random 4 character alphanumeric code
+      const generateCode = () => Math.random().toString(36).slice(-4).toUpperCase();
+      let lobbyCode = generateCode();
 
-    async function playerJoin(i) {
+      // in case of a collision
+      while (lobbies.has(lobbies)) {
+        lobbies = generateCode();
+      }
+
+      const lobbyEmbed = new MessageEmbed()
+        .setTitle(`Lobby \`${lobbyCode}\``)
+        .addField("Player List", `\u200B`)
+        .setFooter(`${players.length} players`)
+        .setColor("AQUA")
+        .setDescription(`Stacking: ${bStack ? "on" : "off"} | Draw: ${bDrawOne ? "once" : "multiple"}`);
+
+      let lobbyMsg;
+      if (isSlash) lobbyMsg = await interaction.editReply({ embeds: [lobbyEmbed], components: [{ type: 1, components: [joinButton] }] });
+      else lobbyMsg = await interaction.reply({ embeds: [lobbyEmbed], components: [{ type: 1, components: [joinButton] }] });
+
+      const filter = interaction => interaction.message.id === lobbyMsg.id;
+      const buttonCollector = lobbyMsg.createMessageComponentCollector({ filter, time: 600000 });
+
+      lobbies.set(lobbyCode, { code: lobbyCode, players, msg: lobbyMsg, embed: lobbyEmbed, collector: buttonCollector, bStack, bDrawOne });
+
+      buttonCollector.on("collect", async i => {
+        joinLobby(i, lobbies.get(lobbyCode));
+      });
+    }
+    async function joinLobby(i, lobby) {
+      const { players, msg, embed, collector, bStack, bDrawOne } = lobby;
       if (players.map(player => player.id).includes(i.user.id)) {
         return i.reply({ content: "You are already in the game!", ephemeral: true });
       }
 
       try {
         await i.defer({ ephemeral: true });
-        const dmMsg = await i.user.send({ embeds: [new MessageEmbed().setColor("AQUA").setTitle("Waiting for players...")], components: [{ type: 1, components: [startButton, leaveButton] }] });
 
         const player = new Player(players.length, i.member.user);
         players.push(player);
+
+        embed.fields[0].value = players.map(player => `*${player.name}*`).join("\n") || "\u200B";
+        embed.setFooter(`${players.length} players`);
+        msg.edit({ embeds: [embed], components: [{ type: 1, components: [joinButton] }] });
+        const dmMsg = await i.user.send({ embeds: [embed], components: [{ type: 1, components: [startButton, leaveButton] }] });
+
         player.setMsg(dmMsg);
 
-        lobbyEmbed.fields[0].value = players.map(player => `*${player.name}*`).join("\n");
-        lobbyEmbed.setFooter(`${players.length} players`);
+        for (const p of players) {
+          if (p !== player) {
+            p.message.edit({ embeds: [embed], components: [{ type: 1, components: [startButton, leaveButton] }] });
+          }
+        }
 
-        lobbyMsg.edit({ embeds: [lobbyEmbed], components: [{ type: 1, components: [joinButton] }] });
         i.followUp({ content: `You have joined uno! Click here to open our DM: https://discord.com/channels/@me/${dmMsg.channel.id}`, ephemeral: true });
 
         // wait for start or leave button press
-        const dmI = await dmMsg.awaitMessageComponent({ filter: i => (!buttonCollector.ended && players.length > 1) || i.customId === "leave" }); //ignore if game already started
+        const dmI = await dmMsg.awaitMessageComponent({ filter: i => (!collector.ended && players.length > 1) || i.customId === "leave" }); //ignore if game already started
 
         if (dmI.customId === "leave") {
           players.splice(players.indexOf(player));
 
           dmI.reply({ content: "You have left Uno", ephemeral: true });
-          lobbyEmbed.fields[0].value = players.map(player => `*${player.name}*`).join("\n") || "\u200B";
-          lobbyEmbed.setFooter(`${players.length} players`);
+          embed.fields[0].value = players.map(player => `*${player.name}*`).join("\n") || "\u200B";
+          embed.setFooter(`${players.length} players`);
 
-          lobbyMsg.edit({ embeds: [lobbyEmbed], components: [{ type: 1, components: [joinButton] }] });
+          msg.edit({ embeds: [embed], components: [{ type: 1, components: [joinButton] }] });
 
           dmMsg.delete();
         } else {
           // start game
           dmI.deferUpdate();
-          buttonCollector.stop();
-          lobbyEmbed.setTitle("Game in progress");
-          lobbyMsg.edit({ embeds: [lobbyEmbed], components: [] });
+          collector.stop();
+          embed.setTitle("Game in progress");
+          msg.edit({ embeds: [embed], components: [] });
+          lobbies.delete(lobby.code);
           startGame(players, { bStack, bDrawOne: bDrawOne }, winner => {
             // game ended
-            lobbyEmbed.setTitle(`${winner.name} won the game!`).setColor("ORANGE");
-            lobbyMsg.edit({ embeds: [lobbyEmbed] });
+            embed.setTitle(`${winner.name} won the game!`).setColor("ORANGE");
+            msg.edit({ embeds: [embed] });
           });
         }
       } catch (error) {
