@@ -110,20 +110,18 @@ module.exports = {
       try {
         await i.defer({ ephemeral: true });
 
+        const dmMsg = await i.user.send({ embeds: [embed], components: [{ type: 1, components: [startButton, leaveButton] }] });
         const player = new Player(players.length, i.member.user);
         players.push(player);
 
         embed.fields[0].value = players.map(player => `*${player.name}*`).join("\n") || "\u200B";
         embed.setFooter(`${players.length} players`);
         msg.edit({ embeds: [embed], components: [{ type: 1, components: [joinButton] }] });
-        const dmMsg = await i.user.send({ embeds: [embed], components: [{ type: 1, components: [startButton, leaveButton] }] });
 
         player.setMsg(dmMsg);
 
         for (const p of players) {
-          if (p !== player) {
-            p.message.edit({ embeds: [embed], components: [{ type: 1, components: [startButton, leaveButton] }] });
-          }
+          p.message.edit({ embeds: [embed], components: [{ type: 1, components: [startButton, leaveButton] }] });
         }
 
         i.followUp({ content: `You have joined uno! Click here to open our DM: https://discord.com/channels/@me/${dmMsg.channel.id}`, ephemeral: true });
