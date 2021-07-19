@@ -22,7 +22,7 @@ module.exports = {
       user = interaction.user;
     } else {
       user = interaction.author;
-      if (!args[0] && !args[1]) {
+      if (args[0] && args[1]) {
         input = numeral(numeral(args[0]).format("0.00")).value();
         wager = args[1].toLowerCase() === "all" ? "all" : numeral(numeral(args[1]).format("0.00")).value();
       } else {
