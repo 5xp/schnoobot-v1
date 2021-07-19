@@ -2,6 +2,8 @@ const { MessageEmbed, MessageButton, MessageActionRow } = require("discord.js");
 
 // TODO quit
 // TODO public lobbies and lobby list?
+// TODO chat
+// TODO fix error when over 24 cards
 
 const lobbies = new Map();
 
@@ -207,13 +209,13 @@ async function startGame(players, options, callback) {
 
   async function startTurn(player) {
     const i = await player.message.awaitMessageComponent();
-    if (i.customId == "draw") {
+    if (i.customId === "draw") {
       const drawnCard = drawCard(player.hand);
 
       // check if drawn card is playable and play it
       if (drawnCard.playable(topCard())) {
-        player.hand.pop();
         await playSpecial(drawnCard, i);
+        player.hand.pop();
         discarded.push(drawnCard);
 
         if (!drawnCard.isWild()) history.push(`${player.name} drew and played ${drawnCard.label()}`);
@@ -277,6 +279,7 @@ async function startGame(players, options, callback) {
 
   // handles special cards
   async function playSpecial(card, i) {
+    const player = players[iTurn];
     switch (card.face) {
       case "Skip":
         iTurn = nextTurn();
@@ -300,7 +303,6 @@ async function startGame(players, options, callback) {
         break;
 
       case "+4":
-        const currentTurn = iTurn;
         if (players[nextTurn()].hand.map(card => card.face).includes("+4") && bStack) {
           nStacked++;
         } else {
@@ -310,13 +312,13 @@ async function startGame(players, options, callback) {
           iTurn = nextTurn();
         }
         // restart the turn so player can pick a color
-        await i.update({ components: [wildCardRow()] });
-        startTurn(players[currentTurn]);
+        await i.update({ components: [wildCardRow()], content: handEmojis(player.hand) });
+        startTurn(player);
         break;
 
       case "Wildcard":
-        await i.update({ components: [wildCardRow()] });
-        startTurn(players[iTurn]);
+        await i.update({ components: [wildCardRow()], content: handEmojis(player.hand) });
+        startTurn(player);
         break;
     }
   }
