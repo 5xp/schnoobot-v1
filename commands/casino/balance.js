@@ -77,7 +77,6 @@ module.exports = {
     } else {
       const user = isSlash ? interaction.options.get("user")?.options?.get("user")?.user ?? interaction.user : !args.length ? interaction.member.user : FindMember(args[0], interaction).user;
 
-      console.log(interaction.options.get("user")?.options?.get("user")?.user);
       if (!user) {
         return interaction.reply(`To use this command: \`\`${module.exports.usage}\`\``);
       }
