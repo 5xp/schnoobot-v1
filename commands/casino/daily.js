@@ -1,28 +1,81 @@
 const { GetDaily } = require("../../utils/coin");
-const { TimeToString } = require("../../utils/helper");
-const { MessageEmbed } = require("discord.js");
+const numeral = require("numeral");
+const { MessageEmbed, MessageButton } = require("discord.js");
 const economySchema = require("../../schemas/economy-schema");
 
 module.exports = {
   name: "daily",
   description: "get daily reward",
-  async execute(message, args) {
-    if (args[0] == "top") {
-      const index = await economySchema.find().sort({ dailystreak: -1 });
-      const top = 10;
-      const j = Math.min(top, index.length);
-      let str = "\n";
+  slash: true,
+  options: [
+    {
+      name: "get",
+      type: "SUB_COMMAND",
+      description: "get your daily",
+    },
+    { name: "top", type: "SUB_COMMAND", description: "see the highest daily streaks" },
+  ],
+  async execute(interaction, args) {
+    const isSlash = interaction.isCommand?.();
 
-      for (var i = 0; i < j; i++) {
-        let streak = +index[i].dailystreak.toString();
-        str += `**#${i + 1}: <@${index[i]._id}> | **${streak}🔥\n`;
-      }
+    if (args?.[0] == "top" || interaction?.options?.has("top")) {
+      await interaction.defer?.();
+      const sortedIndex = await economySchema.find().sort({ dailystreak: -1 });
+      const maxEntries = 10;
+      let currentPage = 0;
+      const numPages = Math.ceil(sortedIndex.length / maxEntries);
 
-      const topEmbed = new MessageEmbed().setColor("#80ff80").addFields({ name: `Top ${j} streaks`, value: str });
-      message.reply({ embeds: [topEmbed], allowedMentions: { repliedUser: false } });
+      const createFields = () => {
+        const j = Math.min(maxEntries, sortedIndex.length - maxEntries * currentPage);
+        const shallowIndex = sortedIndex.slice(currentPage * maxEntries, currentPage * maxEntries + j);
+
+        const field1 = { name: "User", value: "", inline: true };
+        const field2 = { name: "Streak", value: "", inline: true };
+
+        for (let i = 0; i < shallowIndex.length; i++) {
+          const index = `**#${currentPage * maxEntries + i + 1}**: <@${shallowIndex[i]._id}>\n`;
+          const streak = shallowIndex[i].dailystreak || 0;
+          field1.value += index;
+          field2.value += streak + "\n";
+        }
+        return [field1, field2];
+      };
+
+      const createEmbed = () => {
+        return new MessageEmbed()
+          .setColor("#80ff80")
+          .addFields(createFields())
+          .setFooter(`Page ${currentPage + 1}/${numPages}`);
+      };
+
+      const leftButton = new MessageButton().setEmoji("◀").setStyle("PRIMARY").setCustomId("left");
+      const rightButton = new MessageButton().setEmoji("▶").setStyle("PRIMARY").setCustomId("right");
+
+      const msgObject = () => {
+        return { components: [{ type: 1, components: [leftButton, rightButton] }], embeds: [createEmbed()] };
+      };
+
+      const msg = isSlash ? await interaction.editReply(msgObject()) : await interaction.reply(msgObject());
+
+      const filter = i => i.user.id === (isSlash ? interaction.user.id : interaction.author.id);
+      const collector = msg.createMessageComponentCollector(filter, { time: 30000 });
+
+      collector.on("collect", button => {
+        if (button.customId === "right") {
+          currentPage++;
+          currentPage = Math.min(currentPage, numPages);
+          button.update(msgObject());
+        } else {
+          currentPage--;
+          currentPage = Math.max(currentPage, 0);
+          button.update(msgObject());
+        }
+      });
     } else {
-      let data = await GetDaily(message.member);
-      let dailyEmbed = new MessageEmbed();
+      const user = isSlash ? interaction.user : interaction.member.user;
+      const data = await GetDaily(user);
+      const dailyEmbed = new MessageEmbed();
+      const timestamp = Math.floor((Date.now() + dailyAvailable) / 1000);
 
       if (data.awarded === true) {
         dailyEmbed.setColor("#fc03d3");
@@ -47,13 +100,12 @@ module.exports = {
         dailyEmbed
           .setColor("#ff0000")
           .setDescription("You have already claimed your reward!")
-          .setFooter(message.member.displayName + " • Daily available: ", message.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 }))
-          .setTimestamp(Date.now() + data.dailyAvailable);
+          .setAuthor("Daily Reward", user.avatarURL({ format: "png", dynamic: true, size: 2048 }));
 
         fields = [
           {
             name: "**Daily Available**",
-            value: `in ${TimeToString(data.dailyAvailable)}`,
+            value: `<t:${timestamp}:R>\n<t:${timestamp}:t>`,
             inline: true,
           },
           {
@@ -69,9 +121,9 @@ module.exports = {
         ];
       }
 
-      dailyEmbed.setTitle(`Daily Reward`).addFields(fields);
+      dailyEmbed.addFields(fields);
 
-      message.reply({ embeds: [dailyEmbed], allowedMentions: { repliedUser: false } });
+      interaction.reply({ embeds: [dailyEmbed], allowedMentions: { repliedUser: false } });
     }
   },
 };
