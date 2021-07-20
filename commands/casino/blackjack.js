@@ -74,7 +74,7 @@ module.exports = {
     const msg = await message.channel.send({ components: [bjRow], embeds: [bjEmbed] });
 
     const filter = button => button.user.id === message.author.id;
-    const collector = msg.createMessageComponentCollector(filter, { time: 45000 });
+    const collector = msg.createMessageComponentCollector({ filter, time: 45000 });
     var finish = false;
 
     collector.on("collect", button => {

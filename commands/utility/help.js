@@ -53,7 +53,7 @@ module.exports = {
 
       const filter = button => button.user.id === interaction.author.id;
 
-      const collector = msg.createMessageComponentCollector(filter, { time: 30000 });
+      const collector = msg.createMessageComponentCollector({ filter, time: 30000 });
 
       collector.on("collect", button => {
         if (button.customId === "right") {

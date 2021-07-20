@@ -61,7 +61,7 @@ module.exports = {
       const msg = isSlash ? await interaction.editReply(msgObject()) : await interaction.reply(msgObject());
 
       const filter = i => i.user.id === (isSlash ? interaction.user.id : interaction.author.id);
-      const collector = msg.createMessageComponentCollector(filter, { time: 30000 });
+      const collector = msg.createMessageComponentCollector({ filter, time: 30000 });
 
       collector.on("collect", button => {
         if (button.customId === "right") {

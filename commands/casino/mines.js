@@ -84,8 +84,8 @@ module.exports = {
     });
 
     const btnFilter = button => button.user.id === message.author.id;
-    const btnCollector = msg.createMessageComponentCollector(btnFilter);
-    const cashoutCollector = msg2.createMessageComponentCollector(btnFilter);
+    const btnCollector = msg.createMessageComponentCollector({ filter });
+    const cashoutCollector = msg2.createMessageComponentCollector({ filter });
 
     let cellsRevealed = 0;
 

@@ -29,7 +29,6 @@ module.exports = {
         return interaction.reply(`To play, use this command: \`${module.exports.usage}\``);
       }
     }
-    console.log(input);
 
     if (input <= 1) return interaction.reply("Your target payout must be greater than 1.00x!");
 
