@@ -4,6 +4,10 @@ const { AwardPoints, GetUserData } = require("../../utils/coin");
 
 const columns = 5;
 const rows = 5;
+const factorial = [
+  1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800, 39916800, 479001600, 6227020800, 87178291200, 1307674368000, 20922789888000, 355687428096000, 6402373705728000, 121645100408832000,
+  2432902008176640000, 51090942171709440000, 1124000727777607680000, 25852016738884976640000, 620448401733239439360000, 15511210043330985984000000,
+];
 
 // beginning state of all buttons
 const hiddenButton = new MessageButton().setLabel(" ").setStyle("SECONDARY").setCustomId("hiddenButton");
@@ -60,7 +64,7 @@ module.exports = {
     // create array of MessageActionRows
     var buttonRows = createButtonGrid(rows, columns, grid);
 
-    let [, , nextProfit, nextMult, winOdds] = calculateMultiplier(numMines, wager);
+    let [, , nextProfit, nextMult, winOdds] = calculateMultiplier(numMines, 0, wager);
 
     let minesEmbed = new MessageEmbed()
       .setTitle("💣 Mines")
@@ -125,7 +129,7 @@ module.exports = {
 
           AwardPoints(message.author, nextProfit);
         } else {
-          let [currentProfit, currentMult, nextProfit, nextMult, winOdds] = calculateMultiplier(numMines + cellsRevealed, wager);
+          let [currentProfit, currentMult, nextProfit, nextMult, winOdds] = calculateMultiplier(numMines, cellsRevealed, wager);
 
           minesEmbed = new MessageEmbed()
             .setTitle("💣 Mines")
@@ -148,7 +152,7 @@ module.exports = {
         revealGrid(grid);
 
         if (cellsRevealed > 0) {
-          let [currentProfit, currentMult] = calculateMultiplier(numMines + cellsRevealed, wager);
+          let [currentProfit, currentMult] = calculateMultiplier(numMines, cellsRevealed, wager);
           minesEmbed = new MessageEmbed()
             .setTitle("💣 Mines")
             .setColor("#2bff00")
@@ -232,14 +236,17 @@ function createButtonGrid(rows, columns, grid) {
 }
 
 // bombs + clicked mines
-function calculateMultiplier(sum, wager) {
-  let currentMult = Math.round(100 * (25 / (26 - sum))) / 100;
-  let currentProfit = wager * currentMult - wager;
-  let nextMult = Math.round(100 * (25 / (25 - sum))) / 100;
-  let nextProfit = wager * nextMult - wager;
-  let winOdds = (25 - sum) / 25;
-  return [currentProfit, currentMult, nextProfit, nextMult, winOdds];
+function calculateMultiplier(mines, revealed, wager) {
+  const currentOdds = winProbability(mines, revealed);
+  const nextOdds = winProbability(mines, revealed + 1);
+  const currentMult = Math.round(100 * (1 / currentOdds)) / 100;
+  const currentProfit = wager * currentMult - wager;
+  const nextMult = Math.round(100 * (1 / nextOdds)) / 100;
+  const nextProfit = wager * nextMult - wager;
+  return [currentProfit, currentMult, nextProfit, nextMult, nextOdds];
 }
+
+const winProbability = (mines, revealed) => (factorial[25 - mines] * factorial[25 - revealed]) / (factorial[25] * factorial[25 - (mines + revealed)]);
 
 function revealGrid(grid) {
   grid.forEach(row =>
