@@ -35,6 +35,7 @@ module.exports = {
       wager = interaction.options.get("bet").value.toLowerCase() === "all" ? "all" : numeral(interaction.options.get("bet").value).value();
       user = interaction.user;
     } else {
+      user = interaction.author;
       if (args[0] && args[1]) {
         numMines = Math.round(numeral(args[0]).value());
         wager = args[1].toLowerCase() === "all" ? "all" : numeral(numeral(args[1]).format("0.00")).value();
