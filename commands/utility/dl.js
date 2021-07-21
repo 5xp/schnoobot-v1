@@ -20,7 +20,7 @@ module.exports = {
   slash: true,
   async execute(interaction, args, silent) {
     if (silent !== true) silent = false;
-    let url;
+    let url, reaction;
 
     const isSlash = interaction?.type === "APPLICATION_COMMAND";
 
@@ -32,7 +32,7 @@ module.exports = {
       }
 
       url = args.shift().replace(/[<>]/g, "");
-      interaction.react("861916931367108608");
+      reaction = interaction.react("861916931367108608");
     }
 
     const dir = `${process.cwd()}/temp`;
@@ -135,6 +135,11 @@ module.exports = {
         fs.unlink(originalpath, error => {
           if (error) throw error;
         });
+
+      if (reaction) {
+        reaction = await reaction;
+        reaction.remove();
+      }
     });
   },
 };
