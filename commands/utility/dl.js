@@ -1,13 +1,13 @@
 const Discord = require("discord.js");
-const youtubedl = require("youtube-dl");
+const youtubedl = require("youtube-dl-exec");
 const fs = require("fs");
 const { getVideoDurationInSeconds } = require("get-video-duration");
 const { getAudioDurationInSeconds } = require("get-audio-duration");
 const ffmpeg = require("ffmpeg");
 
-const format1 = "--format=bestvideo[ext=mp4][filesize<8M]+bestaudio[ext=m4a]";
-const format2 = "--format=worstvideo[ext=mp4][filesize>8M]+bestaudio[ext=m4a]";
-const format3 = "--format=bestvideo[ext=mp4][filesize<200M]+bestaudio[ext=m4a]";
+const format1 = "bestvideo[ext=mp4][filesize<8M]+bestaudio[ext=m4a]";
+const format2 = "worstvideo[ext=mp4][filesize>8M]+bestaudio[ext=m4a]";
+const format3 = "bestvideo[ext=mp4][filesize<200M]+bestaudio[ext=m4a]";
 
 module.exports = {
   name: ["dl", "download", "tiktok", "youtube", "video"],
@@ -22,10 +22,17 @@ module.exports = {
     if (silent !== true) silent = false;
     let url, reaction;
 
+    const dir = `${process.cwd()}/temp`;
+    const flags = {
+      o: `${dir}/${interaction.id}.%(ext)s`,
+      format: `${format1}/${format2}/${format3}/best[ext=mp4][filesize<200M]/bestvideo+bestaudio/best`,
+    };
+
     const isSlash = interaction?.type === "APPLICATION_COMMAND";
 
     if (isSlash) {
       url = interaction.options.get("url").value;
+      interaction.defer();
     } else {
       if (!args[0]) {
         return interaction.reply(`To use this command: \`${module.exports.usage}\``);
@@ -35,31 +42,19 @@ module.exports = {
       reaction = interaction.react("861916931367108608");
     }
 
-    const dir = `${process.cwd()}/temp`;
-
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir);
     }
 
-    interaction.defer?.();
+    if (interaction?.options?.get("audioonly")?.value) {
+      flags.extractAudio = true;
+      flags.audioFormat = "mp3";
+    }
 
-    var options = ["-o", `${dir}/${interaction.id}.%(ext)s`, `${format1}/${format2}/${format3}/best[ext=mp4][filesize<200M]/bestvideo+bestaudio/best`];
-    if (interaction?.options?.get("audioonly")?.value) options = options.concat("--extract-audio", "--audio-format=mp3");
+    try {
+      const output = await youtubedl(url, flags);
 
-    youtubedl.exec(url, options, {}, async (err, output) => {
-      if (err) {
-        console.log(err);
-        const err_str = err.stderr.match(/^ERROR.*$/gm);
-
-        if (silent) return interaction.react("🚫");
-        else if (isSlash) {
-          await interaction.editReply({ content: "🚫 **Download failed!**", ephemeral: false });
-          await interaction.followUp({ content: `\`\`\`${err_str.join("\n")}\`\`\``, ephemeral: true });
-          return;
-        }
-        return interaction.reply(`\`\`\`${err_str.join("\n")}\`\`\``);
-      }
-
+      console.log(output);
       var filename = fs.readdirSync(dir).filter(file => file.startsWith(interaction.id))[0];
       var ext = filename.slice(interaction.id.length + 1);
       let path = `${dir}/${filename}`;
@@ -88,7 +83,7 @@ module.exports = {
           if (isSlash) {
             await interaction.editReply({ content: `<a:loading:861916931367108608> Compressing file... (${megabytes.toFixed(2)} MB)` });
           } else {
-            var msg = await interaction.channel.send(`Compressing file... (${megabytes.toFixed(2)} MB)`);
+            var msg = await interaction.reply({ content: `Compressing file... (${megabytes.toFixed(2)} MB)`, allowedMentions: { repliedUser: false } });
           }
         } else interaction.react("⚠️");
 
@@ -126,8 +121,6 @@ module.exports = {
         });
       }
 
-      if (msg) msg.delete();
-
       fs.unlink(path, error => {
         if (error) throw error;
       });
@@ -140,7 +133,25 @@ module.exports = {
         reaction = await reaction;
         reaction.remove();
       }
-    });
+    } catch (err) {
+      console.log(err);
+      const err_str = err.stderr.match(/^ERROR.*$/gm);
+
+      if (silent) return interaction.react("🚫");
+      else if (isSlash) {
+        await interaction.editReply({ content: "🚫 **Download failed!**", ephemeral: false });
+        await interaction.followUp({ content: `\`\`\`${err_str.join("\n")}\`\`\``, ephemeral: true });
+        return;
+      }
+      return interaction.reply(`\`\`\`${err_str.join("\n")}\`\`\``);
+    } finally {
+      if (msg) msg.delete();
+
+      if (reaction) {
+        reaction = await reaction;
+        reaction.remove();
+      }
+    }
   },
 };
 

@@ -20,6 +20,6 @@
     "numeral": "^2.0.6",
     "owoify-js": "^1.0.7",
     "request": "^2.88.2",
-    "youtube-dl": "^3.1.0"
+    "youtube-dl-exec": "^1.2.4"
   }
 }
