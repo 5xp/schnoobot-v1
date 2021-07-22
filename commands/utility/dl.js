@@ -4,6 +4,7 @@ const fs = require("fs");
 const { getVideoDurationInSeconds } = require("get-video-duration");
 const { getAudioDurationInSeconds } = require("get-audio-duration");
 const ffmpeg = require("ffmpeg");
+const { downloadFile } = require("../../utils/helper");
 
 const format1 = "bestvideo[ext=mp4][filesize<8M]+bestaudio[ext=m4a]";
 const format2 = "worstvideo[ext=mp4][filesize>8M]+bestaudio[ext=m4a]";
@@ -50,6 +51,13 @@ module.exports = {
       flags.extractAudio = true;
       flags.audioFormat = "mp3";
     }
+
+    if (!fs.existsSync(`${dir}/cookies.txt`)) {
+      console.log("Downloading cookies file...");
+      await downloadFile(process.env.YTDL_COOKIES, `${dir}/cookies.txt`);
+    }
+
+    flags.cookies = `${dir}/cookies.txt`;
 
     try {
       const output = await youtubedl(url, flags);

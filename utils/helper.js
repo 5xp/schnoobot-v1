@@ -1,5 +1,5 @@
 const fs = require("fs");
-const request = require("request");
+const fetch = require("node-fetch");
 
 function FindMember(input, message) {
   let newInput = input.toLowerCase();
@@ -48,9 +48,13 @@ function JoinArgs(args) {
   return String(newArgs);
 }
 
-const DownloadFile = (url, path, callback) => {
-  request.head(url, (err, res, body) => {
-    request(url).pipe(fs.createWriteStream(path)).on("close", callback);
+const downloadFile = async (url, path) => {
+  const res = await fetch(url);
+  const fileStream = fs.createWriteStream(path);
+  await new Promise((resolve, reject) => {
+    res.body.pipe(fileStream);
+    res.body.on("error", reject);
+    fileStream.on("finish", resolve);
   });
 };
 
@@ -79,7 +83,7 @@ module.exports = {
   FindMember,
   FindVC,
   JoinArgs,
-  DownloadFile,
+  downloadFile,
   sanitizeString,
   CheckPermissions,
   TruncateDecimals,
