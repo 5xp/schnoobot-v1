@@ -108,7 +108,6 @@ module.exports = {
     let cellsRevealed = 0;
 
     btnCollector.on("collect", button => {
-      let [currentProfit, currentMult, nextProfit, nextMult, winOdds, currentOdds, nextOdds] = calculateMultiplier(numMines, cellsRevealed, wager);
       const row = Math.floor(button.customId / rows);
       const col = button.customId % rows;
       if (!grid[row][col].revealed) {
@@ -119,6 +118,7 @@ module.exports = {
 
       // game over, reveal each cell
       if (grid[row][col].mine) {
+        let [currentProfit, currentMult, nextProfit, nextMult, winOdds, currentOdds] = calculateMultiplier(numMines, cellsRevealed, wager);
         btnCollector.stop();
         cashoutCollector.stop();
         msg2.delete();
@@ -136,6 +136,7 @@ module.exports = {
         AwardPoints(user, -wager);
       } else {
         cellsRevealed++;
+        let [currentProfit, currentMult, nextProfit, nextMult, winOdds, currentOdds] = calculateMultiplier(numMines, cellsRevealed, wager);
 
         // revealed all non-mines
         if (25 - numMines == cellsRevealed) {
