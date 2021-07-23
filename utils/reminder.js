@@ -21,11 +21,10 @@ async function loadReminders(client) {
 }
 
 async function saveReminder(data) {
-  const { id, inGuild, channelId, date, message } = data;
+  const { id, channelId, date, message } = data;
   await reminderSchema.findByIdAndUpdate(
     id,
     {
-      inGuild,
       channelId,
       date,
       message,

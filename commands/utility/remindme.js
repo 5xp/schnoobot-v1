@@ -22,7 +22,6 @@ module.exports = {
   ],
   async execute(interaction, args, content) {
     const isSlash = interaction.isCommand?.();
-    const inGuild = !!interaction.guild;
     let reason, user;
 
     const time = isSlash ? interaction.options.get("time").value : content;
@@ -47,18 +46,22 @@ module.exports = {
     reminderMessage = user.toString().concat(" ", reminderMessage);
 
     schedule.scheduleJob(date, () => {
-      isSlash ? interaction.followUp(reminderMessage) : interaction.reply(reminderMessage);
+      isSlash
+        ? interaction.followUp({ content: reminderMessage, allowedMentions: { parse: [], repliedUser: true } })
+        : interaction.reply({ content: reminderMessage, allowedMentions: { parse: [], repliedUser: true } });
       deleteReminder(interaction.id);
     });
 
     await interaction.defer?.();
-    const msg = isSlash
-      ? await interaction.editReply(`**Set a reminder for <t:${unixTime(date)}> ${reason}!**`)
-      : await interaction.reply(`**Set a reminder for <t:${unixTime(date)}> ${reason}!**`);
+
+    const msgObject = {
+      content: `**Set a reminder for <t:${unixTime(date)}> ${reason}!**`,
+      allowedMentions: { parse: [], repliedUser: true },
+    };
+    const msg = isSlash ? await interaction.editReply(msgObject) : await interaction.reply(msgObject);
 
     saveReminder({
       id: isSlash ? msg.id : interaction.id,
-      inGuild,
       channelId: interaction.channel.id,
       date,
       message: reminderMessage,
