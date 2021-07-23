@@ -1,11 +1,24 @@
 require("dotenv").config();
+require("module-alias/register");
 const colors = require("colors");
 const mongoose = require("mongoose");
 const { Client } = require("discord.js");
 const mongo = require("./utils/mongo.js");
 const { HandleCoin } = require("./utils/coin");
+const { loadReminders } = require("@utils/reminder");
 
-const client = new Client({ intents: ["GUILDS", "GUILD_MEMBERS", "GUILD_VOICE_STATES", "GUILD_MESSAGES", "DIRECT_MESSAGES", "GUILD_EMOJIS", "GUILD_MESSAGE_REACTIONS"], partials: ["CHANNEL"] });
+const client = new Client({
+  intents: [
+    "GUILDS",
+    "GUILD_MEMBERS",
+    "GUILD_VOICE_STATES",
+    "GUILD_MESSAGES",
+    "DIRECT_MESSAGES",
+    "GUILD_EMOJIS",
+    "GUILD_MESSAGE_REACTIONS",
+  ],
+  partials: ["CHANNEL"],
+});
 
 client.once("ready", async () => {
   console.log(`Schnoobot is online!`.blue);
@@ -21,6 +34,7 @@ client.once("ready", async () => {
   });
 
   HandleCoin(client);
+  loadReminders(client);
 });
 
 client.login(process.env.TOKEN);

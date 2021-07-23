@@ -9,6 +9,7 @@
   "author": "chris#4000",
   "license": "ISC",
   "dependencies": {
+    "chrono-node": "^2.3.1",
     "colors": "^1.4.0",
     "discord.js": "^13.0.0-dev.2e078e4.1625529824",
     "dotenv": "^8.2.0",
@@ -16,11 +17,18 @@
     "get-audio-duration": "^2.0.3",
     "get-video-duration": "^3.0.2",
     "js-levenshtein": "^1.1.6",
+    "module-alias": "^2.2.2",
     "mongoose": "^5.11.16",
     "node-fetch": "^2.6.1",
+    "node-schedule": "^2.0.0",
     "numeral": "^2.0.6",
     "owoify-js": "^1.0.7",
     "request": "^2.88.2",
     "youtube-dl-exec": "^1.2.4"
+  },
+  "_moduleAliases": {
+    "@root" : ".",
+    "@schemas": "./schemas",
+    "@utils": "./utils"
   }
 }
