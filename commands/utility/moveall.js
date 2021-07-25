@@ -1,4 +1,4 @@
-const helper = require("../../utils/helper.js");
+const helper = require("@utils/helper.js");
 module.exports = {
   name: ["moveall", "move", "m"],
   description: "move all members to another voice channel",
@@ -7,7 +7,12 @@ module.exports = {
   slash: true,
   options: [
     { name: "destination", type: "CHANNEL", description: "the channel to move all users to", required: true },
-    { name: "from", type: "CHANNEL", description: "the channel to move all users from-by default this is your current channel", required: false },
+    {
+      name: "from",
+      type: "CHANNEL",
+      description: "the channel to move all users from-by default this is your current channel",
+      required: false,
+    },
   ],
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
@@ -38,9 +43,18 @@ module.exports = {
           })
         );
 
-        console.log(`${interaction.member.displayName} moved ${origin.members.size} members from ${origin.name} to ${destination.name}!`.green);
-        if (isSlash) interaction.editReply(`✅ **Successfully moved ${origin.members.size} members from <#${origin.id}> to <#${destination.id}>**`);
-        else interaction.reply(`✅ **Successfully moved ${origin.members.size} members from <#${origin.id}> to <#${destination.id}>**`);
+        console.log(
+          `${interaction.member.displayName} moved ${origin.members.size} members from ${origin.name} to ${destination.name}!`
+            .green
+        );
+        if (isSlash)
+          interaction.editReply(
+            `✅ **Successfully moved ${origin.members.size} members from <#${origin.id}> to <#${destination.id}>**`
+          );
+        else
+          interaction.reply(
+            `✅ **Successfully moved ${origin.members.size} members from <#${origin.id}> to <#${destination.id}>**`
+          );
       } catch (error) {
         if (isSlash) interaction.editReply(`🚫 **${error}**`);
         else interaction.reply(`🚫 **${error}**`);

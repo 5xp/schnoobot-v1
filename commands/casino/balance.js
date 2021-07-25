@@ -1,8 +1,8 @@
-const { GetUserData, dailyIn } = require("../../utils/coin");
-const { FindMember, TimeToString } = require("../../utils/helper");
+const { getUserData, dailyIn } = require("@utils/coin");
+const { FindMember, TimeToString } = require("@utils/helper");
 const numeral = require("numeral");
 const { MessageEmbed, MessageButton } = require("discord.js");
-const economySchema = require("../../schemas/economy-schema");
+const economySchema = require("@schemas/economy-schema");
 
 module.exports = {
   name: ["balance", "bal"],
@@ -75,13 +75,17 @@ module.exports = {
         }
       });
     } else {
-      const user = isSlash ? interaction.options.get("user")?.options?.get("user")?.user ?? interaction.user : !args.length ? interaction.member.user : FindMember(args[0], interaction).user;
+      const user = isSlash
+        ? interaction.options.get("user")?.options?.get("user")?.user ?? interaction.user
+        : !args.length
+        ? interaction.member.user
+        : FindMember(args[0], interaction).user;
 
       if (!user) {
         return interaction.reply(`To use this command: \`\`${module.exports.usage}\`\``);
       }
 
-      let data = await GetUserData(user);
+      let data = await getUserData(user);
 
       let balance = data?.coins ? +data.coins.toString() : "0";
       let lastdaily = data?.lastdaily;

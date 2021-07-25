@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const { MessageEmbed } = require("discord.js");
 const numeral = require("numeral");
-const { AwardPoints, GetUserData } = require("../../utils/coin");
+const { awardPoints, getUserData } = require("@utils/coin");
 
 module.exports = {
   name: "limbo",
@@ -18,7 +18,10 @@ module.exports = {
 
     if (isSlash) {
       input = numeral(numeral(interaction.options.get("target").value).format("0.00")).value();
-      wager = interaction.options.get("bet").value.toLowerCase() === "all" ? "all" : numeral(interaction.options.get("bet").value).value();
+      wager =
+        interaction.options.get("bet").value.toLowerCase() === "all"
+          ? "all"
+          : numeral(interaction.options.get("bet").value).value();
       user = interaction.user;
     } else {
       user = interaction.author;
@@ -32,7 +35,7 @@ module.exports = {
 
     if (input <= 1) return interaction.reply("Your target payout must be greater than 1.00x!");
 
-    const data = await GetUserData(user);
+    const data = await getUserData(user);
     var balance = data === null ? 0 : +data.coins.toString();
     if (wager === "all") wager = balance;
 
@@ -58,12 +61,12 @@ module.exports = {
       limboEmbed.setColor("#2bff00");
       limboEmbed.addField("**Net Gain**", numeral(profit).format("$0,0.00"), true);
       limboEmbed.addField("**Balance**", numeral(balance + profit).format("$0,0.00"), true);
-      AwardPoints(user, profit);
+      awardPoints(user, profit);
     } else {
       limboEmbed.setColor("#ff0000");
       limboEmbed.addField("**Net Gain**", numeral(-wager).format("$0,0.00"), true);
       limboEmbed.addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true);
-      AwardPoints(user, -wager);
+      awardPoints(user, -wager);
     }
     interaction.reply({ embeds: [limboEmbed], allowedMentions: { repliedUser: false } });
   },

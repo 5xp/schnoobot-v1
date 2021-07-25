@@ -1,25 +1,25 @@
 const msgCooldowns = new Set();
 const COOLDOWN_TIME = 10;
 // const cache = {};
-const economySchema = require("../schemas/economy-schema");
-const { RandomRange, TruncateDecimals } = require("../utils/helper");
+const economySchema = require("@schemas/economy-schema");
+const { RandomRange, TruncateDecimals } = require("@utils/helper");
 const numeral = require("numeral");
 
 module.exports = {
-  async HandleCoin(client) {
+  async handleCoin(client) {
     client.on("messageCreate", message => {
       if (/^[a-z]/i.test(message.content) && message.content.split(" ").length > 1) {
-        ActivityPoints(message.author);
+        activityPoints(message.author);
       }
     });
   },
-  AwardPoints,
-  GetUserData,
-  GetDaily,
+  awardPoints,
+  getUserData,
+  getDaily,
   dailyIn,
 };
 
-async function ActivityPoints(user, time = null) {
+async function activityPoints(user, time = null) {
   const SC_PER_MSG = [10, 20];
   let coins = 0;
 
@@ -37,10 +37,10 @@ async function ActivityPoints(user, time = null) {
     // TODO: points for being in vc
   }
   coins = TruncateDecimals(coins, 2);
-  AwardPoints(user, coins);
+  awardPoints(user, coins);
 }
 
-async function AwardPoints(user, coins) {
+async function awardPoints(user, coins) {
   return await economySchema.findOneAndUpdate(
     {
       _id: user.id,
@@ -56,17 +56,17 @@ async function AwardPoints(user, coins) {
   );
 }
 
-async function GetUserData(user) {
+async function getUserData(user) {
   const result = await economySchema.findById(user.id);
   return result;
 }
 
-async function GetDaily(user) {
+async function getDaily(user) {
   const dailyreward = 1000;
   // let lastDaily;
   // let data, dailystreak;
 
-  let data = await GetUserData(user);
+  let data = await getUserData(user);
   // has user ever claimed daily?
   if (data && data.lastdaily) {
     var lastDaily = data.lastdaily;
@@ -110,11 +110,21 @@ async function GetDaily(user) {
       dailystreak = result.dailystreak;
     }
 
-    let result = await AwardPoints(user, dailyreward * dailystreak);
-    return { awarded: true, reward: numeral(dailyreward * dailystreak).format("$0,0.00"), new_balance: numeral(result.coins).format("$0,0.00"), streak: dailystreak };
+    let result = await awardPoints(user, dailyreward * dailystreak);
+    return {
+      awarded: true,
+      reward: numeral(dailyreward * dailystreak).format("$0,0.00"),
+      new_balance: numeral(result.coins).format("$0,0.00"),
+      streak: dailystreak,
+    };
   } else {
     // time until next daily
-    return { awarded: false, dailyAvailable: dailyAvailable, new_balance: numeral(+data.coins.toString()).format("$0,0.00"), streak: data.dailystreak };
+    return {
+      awarded: false,
+      dailyAvailable: dailyAvailable,
+      new_balance: numeral(+data.coins.toString()).format("$0,0.00"),
+      streak: data.dailystreak,
+    };
   }
 }
 

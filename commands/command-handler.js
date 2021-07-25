@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const handlerFile = "command-handler.js";
-const { getPrefix } = require("../utils/guildsettings");
+const { getPrefix } = require("@utils/guildsettings");
 
 module.exports = client => {
   client.commands = [];
@@ -38,7 +38,9 @@ module.exports = client => {
           if (content.toLowerCase().split(" ")[0] === `${prefix}${alias.toLowerCase()}`) {
             const missing_perms = required_perms.filter(permission => !member.permissions.has(permission));
             if (missing_perms.length) {
-              return message.reply({ content: `You are missing permissions: ${missing_perms.map(p => `\`${p}\``).join(", ")}` });
+              return message.reply({
+                content: `You are missing permissions: ${missing_perms.map(p => `\`${p}\``).join(", ")}`,
+              });
             }
 
             if (disabled) {
@@ -68,12 +70,15 @@ module.exports = client => {
 
       const missing_perms = required_perms.filter(permission => !interaction.member.permissions.has(permission));
       if (missing_perms.length) {
-        return interaction.reply({ content: `You are missing permissions: ${missing_perms.map(p => `\`${p}\``).join(", ")}`, ephemeral: true });
+        return interaction.reply({
+          content: `You are missing permissions: ${missing_perms.map(p => `\`${p}\``).join(", ")}`,
+          ephemeral: true,
+        });
       }
 
       if (disabled) return interaction.reply({ content: "This command is disabled!", ephemeral: true });
 
-      command.execute(interaction);
+      execute(interaction);
     }
   });
 };

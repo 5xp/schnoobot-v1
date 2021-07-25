@@ -4,7 +4,7 @@ const fs = require("fs");
 const { getVideoDurationInSeconds } = require("get-video-duration");
 const { getAudioDurationInSeconds } = require("get-audio-duration");
 const ffmpeg = require("ffmpeg");
-const { downloadFile } = require("../../utils/helper");
+const { downloadFile } = require("@utils/helper");
 
 const format1 = "bestvideo[ext=mp4][filesize<8M]+bestaudio[ext=m4a]";
 const format2 = "worstvideo[ext=mp4][filesize>8M]+bestaudio[ext=m4a]";
@@ -57,7 +57,8 @@ module.exports = {
       await downloadFile(process.env.YTDL_COOKIES, `${dir}/cookies.txt`);
     }
 
-    flags.cookies = `${dir}/cookies.txt`;
+    // only use cookies on instagram and youtube
+    if (url.match(/(instagram)|(youtu?.be)/)) flags.cookies = `${dir}/cookies.txt`;
 
     try {
       const output = await youtubedl(url, flags);
@@ -89,9 +90,14 @@ module.exports = {
         console.log(`Filesize is greater than ${maxFilesize} megabytes! (${megabytes.toFixed(2)} MB)`.red);
         if (!silent) {
           if (isSlash) {
-            await interaction.editReply({ content: `<a:loading:861916931367108608> Compressing file... (${megabytes.toFixed(2)} MB)` });
+            await interaction.editReply({
+              content: `<a:loading:861916931367108608> Compressing file... (${megabytes.toFixed(2)} MB)`,
+            });
           } else {
-            var msg = await interaction.reply({ content: `Compressing file... (${megabytes.toFixed(2)} MB)`, allowedMentions: { repliedUser: false } });
+            var msg = await interaction.reply({
+              content: `Compressing file... (${megabytes.toFixed(2)} MB)`,
+              allowedMentions: { repliedUser: false },
+            });
           }
         } else interaction.react("⚠️");
 

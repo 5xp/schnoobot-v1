@@ -38,7 +38,9 @@ function FindVC(input, message) {
 
   // search cache with name
   if (!vc) {
-    vc = message.guild.channels.cache.filter(channel => channel.name.toLowerCase().includes(input) && channel.type === "voice").first();
+    vc = message.guild.channels.cache
+      .filter(channel => channel.name.toLowerCase().includes(input) && channel.type === "voice")
+      .first();
   }
   return vc;
 }

@@ -3,8 +3,8 @@ require("module-alias/register");
 const colors = require("colors");
 const mongoose = require("mongoose");
 const { Client } = require("discord.js");
-const mongo = require("./utils/mongo.js");
-const { HandleCoin } = require("./utils/coin");
+const mongo = require("@utils/mongo.js");
+const { handleCoin } = require("@utils/coin");
 const { loadReminders } = require("@utils/reminder");
 
 const client = new Client({
@@ -25,15 +25,13 @@ client.once("ready", async () => {
   if (!client.application?.owner) await client.application?.fetch();
   client.user.setActivity(`for ${process.env.PREFIX}`, { type: "WATCHING" });
 
-  const commandHandler = require(`./commands/command-handler.js`);
-
-  commandHandler(client);
-
   await mongo().then(mongoose => {
     console.log(`Connected to mongo!`.green);
   });
 
-  HandleCoin(client);
+  const commandHandler = require(`./commands/command-handler.js`);
+  commandHandler(client);
+  handleCoin(client);
   loadReminders(client);
 });
 

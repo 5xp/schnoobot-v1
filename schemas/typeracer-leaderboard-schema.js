@@ -1,19 +1,19 @@
 const mongoose = require("mongoose");
 
-const schemaObj = {
+const string = {
   type: String,
   required: false,
 };
 
-const requiredSchema = {
+const requiredString = {
   type: String,
   required: true,
 };
 
 const leaderboardSchema = mongoose.Schema({
-  _id: requiredSchema,
-  name: requiredSchema,
-  wpm: requiredSchema,
+  _id: requiredString,
+  name: requiredString,
+  wpm: requiredString,
   gamesplayed: { type: Number, required: true },
   wpmsum: { type: Number, required: true },
 });

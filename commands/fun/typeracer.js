@@ -1,8 +1,8 @@
 const fs = require("fs");
 const levenshtein = require("js-levenshtein");
 const Discord = require("discord.js");
-const leaderboardSchema = require("../../schemas/typeracer-leaderboard-schema");
-const helper = require("../../utils/helper.js");
+const leaderboardSchema = require("@schemas/typeracer-leaderboard-schema");
+const helper = require("@utils/helper.js");
 
 module.exports = {
   name: ["typeracer", "type", "t"],
@@ -22,8 +22,10 @@ module.exports = {
     };
 
     if (!args.length) {
-      let InitialEmbed = new Discord.MessageEmbed().setColor("#6a00ff").setDescription(`🕑 You will have ${t} seconds to finish this prompt.`);
-      message.channel.send({ embed: [InitialEmbed] }).then(countdown());
+      let initialEmbed = new Discord.MessageEmbed()
+        .setColor("#6a00ff")
+        .setDescription(`🕑 You will have ${t} seconds to finish this prompt.`);
+      message.channel.send({ embed: [initialEmbed] }).then(countdown());
     } else {
       switch (args[0]) {
         case "top":
@@ -47,8 +49,10 @@ module.exports = {
         if (counter <= 1) {
           finished = true;
           setTimeout(() => {
-            let PromptEmbed = new Discord.MessageEmbed().setColor("#2af7ed").setDescription(currentPrompt.replace(/ /g, " \u200B"));
-            msg.edit({ embeds: [PromptEmbed] }).then(StartGame());
+            let promptEmbed = new Discord.MessageEmbed()
+              .setColor("#2af7ed")
+              .setDescription(currentPrompt.replace(/ /g, " \u200B"));
+            msg.edit({ embeds: [promptEmbed] }).then(StartGame());
           }, 1000);
         }
 
@@ -133,7 +137,9 @@ module.exports = {
           str += `**#${i + 1}**: <@${index[i]._id}> | **${index[i].wpm}** wpm\n`;
         }
 
-        statEmbed = new Discord.MessageEmbed().setColor("#80ff80").addFields({ name: `Showing top ${j} typeracer scores`, value: str });
+        statEmbed = new Discord.MessageEmbed()
+          .setColor("#80ff80")
+          .addFields({ name: `Showing top ${j} typeracer scores`, value: str });
       } else {
         // specific user stats
         const matchId = obj => obj._id == user.id;

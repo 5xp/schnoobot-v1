@@ -1,4 +1,4 @@
-const { setPrefix, getPrefix } = require("../../utils/guildsettings");
+const { setPrefix, getPrefix } = require("@utils/guildsettings");
 
 module.exports = {
   name: "prefix",

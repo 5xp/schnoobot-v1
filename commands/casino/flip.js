@@ -1,5 +1,5 @@
 const { MessageEmbed } = require("discord.js");
-const { AwardPoints, GetUserData } = require("../../utils/coin");
+const { awardPoints, getUserData } = require("@utils/coin");
 const numeral = require("numeral");
 
 module.exports = {
@@ -28,7 +28,7 @@ module.exports = {
         return;
     }
 
-    let data = await GetUserData(message.author);
+    let data = await getUserData(message.author);
     const balance = data === null ? 0 : +data.coins.toString();
     if (wager === "all") wager = balance;
 
@@ -40,7 +40,10 @@ module.exports = {
 
     const flipEmbed = new MessageEmbed()
       .setTitle("🪙 Coin Flip")
-      .setFooter(message.member.displayName, message.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 }))
+      .setFooter(
+        message.member.displayName,
+        message.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 })
+      )
       .setTimestamp();
 
     const flip = Math.round(Math.random());
@@ -50,13 +53,13 @@ module.exports = {
       flipEmbed.setColor("#2bff00");
       flipEmbed.addField("**Net Gain**", numeral(wager).format("$0,0.00"), true);
       flipEmbed.addField("**Balance**", numeral(balance + wager).format("$0,0.00"), true);
-      AwardPoints(message.author, wager);
+      awardPoints(message.author, wager);
     } else {
       var end = "**You lost!** ";
       flipEmbed.setColor("#ff0000");
       flipEmbed.addField("**Net Gain**", numeral(-wager).format("$0,0.00"), true);
       flipEmbed.addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true);
-      AwardPoints(message.author, -wager);
+      awardPoints(message.author, -wager);
     }
 
     const str = flip == 0 ? end + `The coin landed on **heads**!` : end + `The coin landed on **tails**!`;

@@ -3,6 +3,6 @@ module.exports = {
   description: "ping command",
   slash: true,
   execute(message, args) {
-    message.reply("pong!");
+    message.reply("Pong!");
   },
 };

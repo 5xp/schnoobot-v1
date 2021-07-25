@@ -1,4 +1,4 @@
-const settingsSchema = require("../schemas/guildsettings-schema");
+const settingsSchema = require("@schemas/guildsettings-schema");
 const prefixCache = new Map();
 
 async function getPrefix(id) {

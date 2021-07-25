@@ -11,7 +11,14 @@ module.exports = {
     const cmds = interaction.client.commands
       .filter(command => command.slash)
       .map(command => {
-        let { name, description = "missing description", options = [], slash = false, defaultPermission = true, slashPermissions = [] } = command;
+        let {
+          name,
+          description = "missing description",
+          options = [],
+          slash = false,
+          defaultPermission = true,
+          slashPermissions = [],
+        } = command;
         if (typeof name === "string") name = [name];
         const cmd = { name: name[0], description, options, defaultPermission, permissions: slashPermissions };
         return cmd;
@@ -34,7 +41,9 @@ module.exports = {
 
     async function setCommands(commandManager) {
       // if not deployed to guild don't bother with commands that use permissions
-      const appCommands = await commandManager.set(commandManager?.guild ? cmds : cmds.filter(cmd => !cmd.permissions.length));
+      const appCommands = await commandManager.set(
+        commandManager?.guild ? cmds : cmds.filter(cmd => !cmd.permissions.length)
+      );
 
       // for some reason we can only set permissions after setting the commands
       if (commandManager?.guild) {

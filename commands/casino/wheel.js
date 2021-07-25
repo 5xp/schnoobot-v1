@@ -1,5 +1,5 @@
 const { MessageEmbed } = require("discord.js");
-const { AwardPoints, GetUserData } = require("../../utils/coin");
+const { awardPoints, getUserData } = require("@utils/coin");
 const numeral = require("numeral");
 const INPUT_TYPES = ["red", "black", "even", "odd", "low", "high", "number"];
 const DIGIT = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
@@ -24,7 +24,7 @@ module.exports = {
       return message.reply(`to play, use this command: \`${module.exports.usage}\``);
     }
 
-    const data = await GetUserData(message.author);
+    const data = await getUserData(message.author);
     const balance = data === null ? 0 : +data.coins.toString();
     if (wager === "all") wager = balance;
 
@@ -37,22 +37,28 @@ module.exports = {
     const roll = new Roll(input);
     const wheelEmbed = new MessageEmbed()
       .setTitle("💸 Roulette Wheel")
-      .setFooter(message.member.displayName, message.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 }))
+      .setFooter(
+        message.member.displayName,
+        message.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 })
+      )
       .setTimestamp();
 
     if (roll[type][0]) {
       wheelEmbed.setColor("#2bff00");
       wheelEmbed.addField("**Net Gain**", numeral(wager * roll[type][1]).format("$0,0.00"), true);
       wheelEmbed.addField("**Balance**", numeral(balance + wager * roll[type][1]).format("$0,0.00"), true);
-      AwardPoints(message.author, wager * roll[type][1]);
+      awardPoints(message.author, wager * roll[type][1]);
     } else {
       wheelEmbed.setColor("#ff0000");
       wheelEmbed.addField("**Net Gain**", numeral(-wager).format("$0,0.00"), true);
       wheelEmbed.addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true);
-      AwardPoints(message.author, -wager);
+      awardPoints(message.author, -wager);
     }
     const clr = roll.color !== "red" && roll.color !== "black" ? "🟢" : roll.color == "red" ? "🔴" : "⚫";
-    const digits = roll.num < 10 ? `:${DIGIT[+roll.num.toString()[0]]}:` : `:${DIGIT[+roll.num.toString()[0]]}: :${DIGIT[+roll.num.toString()[1]]}:`;
+    const digits =
+      roll.num < 10
+        ? `:${DIGIT[+roll.num.toString()[0]]}:`
+        : `:${DIGIT[+roll.num.toString()[0]]}: :${DIGIT[+roll.num.toString()[1]]}:`;
     const str = `${clr} ${digits}`;
 
     wheelEmbed.setDescription(str);

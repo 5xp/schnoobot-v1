@@ -1,7 +1,7 @@
-const { GetDaily } = require("../../utils/coin");
+const { getDaily } = require("@utils/coin");
 const numeral = require("numeral");
 const { MessageEmbed, MessageButton } = require("discord.js");
-const economySchema = require("../../schemas/economy-schema");
+const economySchema = require("@schemas/economy-schema");
 
 module.exports = {
   name: "daily",
@@ -73,7 +73,7 @@ module.exports = {
       });
     } else {
       const user = isSlash ? interaction.user : interaction.member.user;
-      const data = await GetDaily(user);
+      const data = await getDaily(user);
       const dailyEmbed = new MessageEmbed();
       const timestamp = Math.floor((Date.now() + dailyAvailable) / 1000);
 
@@ -97,10 +97,7 @@ module.exports = {
           },
         ];
       } else {
-        dailyEmbed
-          .setColor("#ff0000")
-          .setDescription("You have already claimed your reward!")
-          .setAuthor("Daily Reward", user.avatarURL({ format: "png", dynamic: true, size: 2048 }));
+        dailyEmbed.setColor("#ff0000").setDescription("You have already claimed your reward!");
 
         fields = [
           {
@@ -121,7 +118,9 @@ module.exports = {
         ];
       }
 
-      dailyEmbed.addFields(fields);
+      dailyEmbed
+        .addFields(fields)
+        .setAuthor("Daily Reward", user.avatarURL({ format: "png", dynamic: true, size: 2048 }));
 
       interaction.reply({ embeds: [dailyEmbed], allowedMentions: { repliedUser: false } });
     }

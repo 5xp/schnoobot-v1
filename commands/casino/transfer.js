@@ -1,6 +1,6 @@
-const { AwardPoints, GetUserData } = require("../../utils/coin");
+const { awardPoints, getUserData } = require("@utils/coin");
 const numeral = require("numeral");
-const { FindMember } = require("../../utils/helper");
+const { FindMember } = require("@utils/helper");
 const Discord = require("discord.js");
 
 module.exports = {
@@ -15,7 +15,9 @@ module.exports = {
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
 
-    let transfer = isSlash ? numeral(interaction.options.get("amount").value).value() : numeral(numeral(args[1]).format("0.00")).value();
+    let transfer = isSlash
+      ? numeral(interaction.options.get("amount").value).value()
+      : numeral(numeral(args[1]).format("0.00")).value();
     let transferee = isSlash ? interaction.options.get("user").member : FindMember(args[0], interaction);
 
     if (!transferee) {
@@ -26,11 +28,11 @@ module.exports = {
       return;
     }
 
-    const data = await GetUserData(interaction.member);
-    const transferee_data = await GetUserData(transferee);
+    const data = await getUserData(interaction.member);
+    const transfereeData = await getUserData(transferee);
 
-    balance = +data.coins.toString();
-    transferee_balance = +transferee_data.coins.toString();
+    const balance = +data.coins.toString();
+    const transfereeBalance = transfereeData?.coins ? +transfereeData.coins.toString() : 0;
 
     if (transfer > balance) {
       return interaction.reply(`insufficient balance! Your balance is **${numeral(balance).format("0,0.00")}**.`);
@@ -43,11 +45,15 @@ module.exports = {
       .setTitle(`${interaction.member.displayName}'s transfer to ${transferee.displayName}`)
       .addField("**Transfer**", numeral(transfer).format("$0,0.00"), true)
       .addField("**New Balance**", numeral(balance - transfer).format("$0,0.00"), true)
-      .addField(`**${transferee.displayName}'s Balance**`, numeral(transferee_balance + transfer).format("$0,0.00"), true);
+      .addField(
+        `**${transferee.displayName}'s Balance**`,
+        numeral(transfereeBalance + transfer).format("$0,0.00"),
+        true
+      );
 
     interaction.reply({ embeds: [transferEmbed], allowedMentions: { repliedUser: false } });
 
-    AwardPoints(interaction.member, -transfer);
-    AwardPoints(transferee, transfer);
+    awardPoints(interaction.member, -transfer);
+    awardPoints(transferee, transfer);
   },
 };

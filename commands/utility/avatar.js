@@ -1,5 +1,5 @@
 const Discord = require("discord.js");
-const { FindMember } = require("../../utils/helper.js");
+const { FindMember } = require("@utils/helper.js");
 
 module.exports = {
   name: ["avatar", "av", "pfp"],
@@ -27,7 +27,10 @@ module.exports = {
         return;
       }
     }
-    const avatarEmbed = new Discord.MessageEmbed().setColor("#005eff").setAuthor(`${desiredUser.username}'s avatar`).setImage(desiredUser.avatarURL(avatarFormat));
+    const avatarEmbed = new Discord.MessageEmbed()
+      .setColor("#005eff")
+      .setAuthor(`${desiredUser.username}'s avatar`)
+      .setImage(desiredUser.avatarURL(avatarFormat));
     interaction.reply({ embeds: [avatarEmbed] });
   },
 };

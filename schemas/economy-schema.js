@@ -1,39 +1,39 @@
 const mongoose = require("mongoose");
 
-const schemaObj = {
+const string = {
   type: String,
   required: false,
 };
 
-const requiredSchema = {
+const requiredString = {
   type: String,
   required: true,
 };
 
-const numberSchema = {
+const number = {
   type: Number,
   required: false,
   min: 0,
 };
 
-const decimalSchema = {
+const decimal = {
   type: mongoose.Decimal128,
   set: v => mongoose.Types.Decimal128.fromString(v.toFixed(2)),
   required: false,
   default: 0,
 };
 
-const integerSchema = {
+const integer = {
   type: Number,
   get: v => Math.round(v),
   set: v => Math.round(v),
 };
 
 const economySchema = mongoose.Schema({
-  _id: requiredSchema,
-  coins: decimalSchema,
-  lastdaily: numberSchema,
-  dailystreak: integerSchema,
+  _id: requiredString,
+  coins: decimal,
+  lastdaily: number,
+  dailystreak: integer,
 });
 
 module.exports = mongoose.model("economy", economySchema);

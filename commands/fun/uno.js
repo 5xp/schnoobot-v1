@@ -91,13 +91,29 @@ module.exports = {
         .setDescription(`Stacking: ${bStack ? "on" : "off"} | Draw: ${bDrawOne ? "once" : "multiple"}`);
 
       let lobbyMsg;
-      if (isSlash) lobbyMsg = await interaction.editReply({ embeds: [lobbyEmbed], components: [{ type: 1, components: [joinButton] }] });
-      else lobbyMsg = await interaction.reply({ embeds: [lobbyEmbed], components: [{ type: 1, components: [joinButton] }] });
+      if (isSlash)
+        lobbyMsg = await interaction.editReply({
+          embeds: [lobbyEmbed],
+          components: [{ type: 1, components: [joinButton] }],
+        });
+      else
+        lobbyMsg = await interaction.reply({
+          embeds: [lobbyEmbed],
+          components: [{ type: 1, components: [joinButton] }],
+        });
 
       const filter = interaction => interaction.message.id === lobbyMsg.id;
       const buttonCollector = lobbyMsg.createMessageComponentCollector({ filter });
 
-      lobbies.set(lobbyCode, { code: lobbyCode, players, msg: lobbyMsg, embed: lobbyEmbed, collector: buttonCollector, bStack, bDrawOne });
+      lobbies.set(lobbyCode, {
+        code: lobbyCode,
+        players,
+        msg: lobbyMsg,
+        embed: lobbyEmbed,
+        collector: buttonCollector,
+        bStack,
+        bDrawOne,
+      });
 
       buttonCollector.on("collect", async i => {
         joinLobby(i, lobbies.get(lobbyCode));
@@ -112,7 +128,10 @@ module.exports = {
       try {
         await i.defer({ ephemeral: true });
 
-        const dmMsg = await i.user.send({ embeds: [embed], components: [{ type: 1, components: [startButton, leaveButton] }] });
+        const dmMsg = await i.user.send({
+          embeds: [embed],
+          components: [{ type: 1, components: [startButton, leaveButton] }],
+        });
         const player = new Player(players.length, i.member.user);
         players.push(player);
 
@@ -126,10 +145,15 @@ module.exports = {
           p.message.edit({ embeds: [embed], components: [{ type: 1, components: [startButton, leaveButton] }] });
         }
 
-        i.followUp({ content: `You have joined uno! Click here to open our DM: https://discord.com/channels/@me/${dmMsg.channel.id}`, ephemeral: true });
+        i.followUp({
+          content: `You have joined uno! Click here to open our DM: https://discord.com/channels/@me/${dmMsg.channel.id}`,
+          ephemeral: true,
+        });
 
         // wait for start or leave button press
-        const dmI = await dmMsg.awaitMessageComponent({ filter: i => (!collector.ended && players.length > 1) || i.customId === "leave" }); //ignore if game already started
+        const dmI = await dmMsg.awaitMessageComponent({
+          filter: i => (!collector.ended && players.length > 1) || i.customId === "leave",
+        }); //ignore if game already started
 
         if (dmI.customId === "leave") {
           players.splice(players.indexOf(player));
@@ -202,7 +226,11 @@ async function startGame(players, options, callback) {
 
   // edit the dm
   for (const player of players) {
-    await player.message.edit({ content: handEmojis(player.hand), embeds: [createUnoEmbed(player)], components: createActionRows(player) });
+    await player.message.edit({
+      content: handEmojis(player.hand),
+      embeds: [createUnoEmbed(player)],
+      components: createActionRows(player),
+    });
   }
 
   startTurn(players[iTurn]);
@@ -225,10 +253,18 @@ async function startGame(players, options, callback) {
 
         // if drawing multiple, restart turn
         if (!bDrawOne) {
-          await i.update({ content: handEmojis(player.hand), embeds: [createUnoEmbed(player)], components: createActionRows(player) });
+          await i.update({
+            content: handEmojis(player.hand),
+            embeds: [createUnoEmbed(player)],
+            components: createActionRows(player),
+          });
           for (const p of players) {
             if (p !== player) {
-              p.message.edit({ content: handEmojis(p.hand), embeds: [createUnoEmbed(p)], components: createActionRows(p) });
+              p.message.edit({
+                content: handEmojis(p.hand),
+                embeds: [createUnoEmbed(p)],
+                components: createActionRows(p),
+              });
             }
           }
           startTurn(player);
@@ -262,7 +298,11 @@ async function startGame(players, options, callback) {
     // advance turn and update each player
     iTurn = nextTurn();
 
-    await i.update({ content: handEmojis(player.hand), embeds: [createUnoEmbed(player)], components: createActionRows(player) });
+    await i.update({
+      content: handEmojis(player.hand),
+      embeds: [createUnoEmbed(player)],
+      components: createActionRows(player),
+    });
 
     for (const p of players) {
       if (p !== player) {
@@ -324,7 +364,12 @@ async function startGame(players, options, callback) {
   }
 
   function createUnoEmbed(p) {
-    const embed = new MessageEmbed().setAuthor(`${players[iTurn].name}'s turn`, players[iTurn].user.avatarURL({ format: "png", dynamic: true, size: 2048 })).setColor(topCard().color.toUpperCase());
+    const embed = new MessageEmbed()
+      .setAuthor(
+        `${players[iTurn].name}'s turn`,
+        players[iTurn].user.avatarURL({ format: "png", dynamic: true, size: 2048 })
+      )
+      .setColor(topCard().color.toUpperCase());
 
     // bold user's name and underline turn
     const fields = players.map(player => {
@@ -376,7 +421,11 @@ async function startGame(players, options, callback) {
       rows[i] = new MessageActionRow();
     }
 
-    const drawCardButton = new MessageButton().setLabel("Draw").setStyle("PRIMARY").setCustomId("draw").setDisabled(isTurn);
+    const drawCardButton = new MessageButton()
+      .setLabel("Draw")
+      .setStyle("PRIMARY")
+      .setCustomId("draw")
+      .setDisabled(isTurn);
     rows[0].addComponents([drawCardButton]);
 
     for (var j = 0; j < hand.length; j++) {
@@ -387,7 +436,10 @@ async function startGame(players, options, callback) {
     }
 
     // if player can stack, don't let them play anything else
-    if (nStacked > 0) rows.forEach(row => row.components.forEach(button => button.setDisabled(hand[button.customId]?.face !== topCard().face)));
+    if (nStacked > 0)
+      rows.forEach(row =>
+        row.components.forEach(button => button.setDisabled(hand[button.customId]?.face !== topCard().face))
+      );
     return rows;
   }
 
@@ -420,7 +472,35 @@ async function startGame(players, options, callback) {
 function createUnoDeck() {
   const deck = [];
   const colors = ["Red", "Yellow", "Green", "Blue"];
-  const faces = ["0", "1", "1", "2", "2", "3", "3", "4", "4", "5", "5", "6", "6", "7", "7", "8", "8", "9", "9", "Skip", "Skip", "Reverse", "Reverse", "+2", "+2", "Wildcard", "+4"];
+  const faces = [
+    "0",
+    "1",
+    "1",
+    "2",
+    "2",
+    "3",
+    "3",
+    "4",
+    "4",
+    "5",
+    "5",
+    "6",
+    "6",
+    "7",
+    "7",
+    "8",
+    "8",
+    "9",
+    "9",
+    "Skip",
+    "Skip",
+    "Reverse",
+    "Reverse",
+    "+2",
+    "+2",
+    "Wildcard",
+    "+4",
+  ];
   for (var i = 0; i < colors.length; i++) {
     for (var j = 0; j < faces.length; j++) {
       const card = new Card(colors[i], faces[j]);

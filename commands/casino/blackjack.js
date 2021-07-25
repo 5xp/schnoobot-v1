@@ -1,5 +1,5 @@
 const { MessageEmbed, MessageButton, MessageActionRow } = require("discord.js");
-const { AwardPoints, GetUserData } = require("../../utils/coin");
+const { awardPoints, getUserData } = require("@utils/coin");
 const numeral = require("numeral");
 var blackjackCache = {};
 
@@ -18,7 +18,7 @@ module.exports = {
         return message.reply(`to play, use this command: \`${module.exports.usage}\``);
       }
 
-      let data = await GetUserData(message.author);
+      let data = await getUserData(message.author);
       var balance = data === null ? 0 : +data.coins.toString();
       if (wager === "all") wager = balance;
 
@@ -50,7 +50,7 @@ module.exports = {
       hands = [dealerHand, yourHand];
       if (blackjackCache[message.author.id].collector !== undefined) blackjackCache[message.author.id].collector.stop();
 
-      let data = await GetUserData(message.author);
+      let data = await getUserData(message.author);
       var balance = data === null ? 0 : +data.coins.toString();
       var wager = blackjackCache[message.author.id].wager < balance ? blackjackCache[message.author.id].wager : balance;
     }
@@ -63,9 +63,17 @@ module.exports = {
     // user input
     let hitButton = new MessageButton().setLabel("Hit").setEmoji(emojis[HIT]).setStyle("SUCCESS").setCustomId("hit");
 
-    let standButton = new MessageButton().setLabel("Stand").setEmoji(emojis[STAND]).setStyle("DANGER").setCustomId("stand");
+    let standButton = new MessageButton()
+      .setLabel("Stand")
+      .setEmoji(emojis[STAND])
+      .setStyle("DANGER")
+      .setCustomId("stand");
 
-    let doubleButton = new MessageButton().setLabel("Double Down").setEmoji(emojis[DOUBLE]).setStyle("PRIMARY").setCustomId("double");
+    let doubleButton = new MessageButton()
+      .setLabel("Double Down")
+      .setEmoji(emojis[DOUBLE])
+      .setStyle("PRIMARY")
+      .setCustomId("double");
 
     if (wager * 2 > balance) doubleButton.setDisabled(true);
 
@@ -149,7 +157,11 @@ module.exports = {
         }
       }
 
-      if ((yourHand.score > dealerHand.score && !yourHand.bust && dealerHand.score >= 17) || dealerHand.bust || yourHand.blackjack) {
+      if (
+        (yourHand.score > dealerHand.score && !yourHand.bust && dealerHand.score >= 17) ||
+        dealerHand.bust ||
+        yourHand.blackjack
+      ) {
         var end = 0;
         finish = true;
       } else if (yourHand.score == dealerHand.score && dealerHand.score >= 17) {
@@ -165,7 +177,10 @@ module.exports = {
         .setColor("#ffffff")
         .addField(`Your Hand | **${yourHand.score}**`, yourHand.emoji_string)
         .addField(`Dealer's Hand | **${dealerHand.score}**`, dealerHand.emoji_string)
-        .setFooter(message.member.displayName, message.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 }))
+        .setFooter(
+          message.member.displayName,
+          message.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 })
+        )
         .setTimestamp();
 
       blackjackCache[message.author.id] = {
@@ -181,7 +196,7 @@ module.exports = {
           bjEmbed.setColor("#00ff00");
           bjEmbed.addField("**Net Gain**", numeral(wager).format("$0,0.00"), true);
           bjEmbed.addField("**Balance**", numeral(balance + wager).format("$0,0.00"), true);
-          AwardPoints(message.author, wager);
+          awardPoints(message.author, wager);
         } else if (end === 1) {
           bjEmbed.setDescription("**You drew!**");
           bjEmbed.setColor("#9ecfff");
@@ -192,7 +207,7 @@ module.exports = {
           bjEmbed.setColor("#ff0000");
           bjEmbed.addField("**Net Gain**", numeral(-wager).format("$0,0.00"), true);
           bjEmbed.addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true);
-          AwardPoints(message.author, -wager);
+          awardPoints(message.author, -wager);
         }
       }
     }
