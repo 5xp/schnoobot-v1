@@ -1,4 +1,4 @@
-const { MessageAttachment, MessageButton } = require("discord.js");
+const { MessageAttachment, MessageButton, MessageEmbed, Formatters } = require("discord.js");
 module.exports = {
   name: "eval",
   description: "execute code",
@@ -23,14 +23,19 @@ module.exports = {
       if (typeof evaled !== "string") evaled = require("util").inspect(evaled);
       let cleaned = clean(evaled);
 
-      if (cleaned.length > 2000) {
+      if (cleaned.length > 4087) {
         const buffer = Buffer.from(cleaned, "utf-8");
         const attachment = new MessageAttachment(buffer, "response.xl");
 
         if (interaction.isCommand?.()) {
           const msg = await interaction.editReply({
             content: "⚠ **Response is too large - cannot respond ephemerally**",
-            components: [{ type: 1, components: [new MessageButton().setLabel("Send anyway").setStyle("DANGER").setCustomId("send")] }],
+            components: [
+              {
+                type: 1,
+                components: [new MessageButton().setLabel("Send anyway").setStyle("DANGER").setCustomId("send")],
+              },
+            ],
           });
 
           msg.awaitMessageComponent({ time: 15000 }).then(async i => {
@@ -39,16 +44,26 @@ module.exports = {
           });
         } else interaction.reply({ files: [attachment], allowedMentions: { repliedUser: false } });
       } else {
-        if (interaction.isCommand?.()) interaction.editReply({ content: `\`\`\`xl\n${cleaned}\`\`\`` });
-        else interaction.reply({ content: `\`\`\`xl\n${cleaned}\`\`\``, allowedMentions: { repliedUser: false } });
+        const embed = new MessageEmbed({ description: Formatters.codeBlock("xl", cleaned) });
+        if (interaction.isCommand?.()) interaction.editReply({ embeds: [embed] });
+        else interaction.reply({ embeds: [embed], allowedMentions: { repliedUser: false } });
       }
     } catch (err) {
-      if (interaction.isCommand?.()) interaction.followUp({ content: `\`ERROR\` \`\`\`xl\n${clean(err)}\n\`\`\``, allowedMentions: { repliedUser: false } });
-      else interaction.reply({ content: `\`ERROR\` \`\`\`xl\n${clean(err)}\n\`\`\``, allowedMentions: { repliedUser: false } });
+      if (interaction.isCommand?.())
+        interaction.followUp({
+          content: `\`ERROR\` ${Formatters.codeBlock("xl", clean(err))}`,
+          allowedMentions: { repliedUser: false },
+        });
+      else
+        interaction.reply({
+          content: `\`ERROR\` ${Formatters.codeBlock("xl", clean(err))}`,
+          allowedMentions: { repliedUser: false },
+        });
     }
   },
 };
 function clean(text) {
-  if (typeof text === "string") return text.replace(/`/g, "`" + String.fromCharCode(8203)).replace(/@/g, "@" + String.fromCharCode(8203));
+  if (typeof text === "string")
+    return text.replace(/`/g, "`" + String.fromCharCode(8203)).replace(/@/g, "@" + String.fromCharCode(8203));
   else return text;
 }
