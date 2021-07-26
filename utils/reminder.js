@@ -1,5 +1,6 @@
 const reminderSchema = require("@schemas/reminder-schema");
 const schedule = require("node-schedule");
+const { MessageEmbed } = require("discord.js");
 
 async function loadReminders(client) {
   const entries = await reminderSchema.find();
@@ -10,8 +11,11 @@ async function loadReminders(client) {
       const channel = await client.channels.fetch(entry.channelId);
       const message = await channel.messages.fetch(entry._id);
 
+      const reminderEmbed = new MessageEmbed().setColor("#f0b111").setTitle("Reminder!");
+      if (entry.message !== "Reminder!") reminderEmbed.setDescription(entry.message);
+
       schedule.scheduleJob(entry.date, () => {
-        message.reply(entry.message);
+        message.reply({ embeds: [reminderEmbed] });
         deleteReminder(entry._id);
       });
     } else {

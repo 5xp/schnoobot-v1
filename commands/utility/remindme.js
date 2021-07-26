@@ -1,6 +1,7 @@
 const chrono = require("chrono-node");
 const schedule = require("node-schedule");
 const { saveReminder, deleteReminder } = require("@utils/reminder");
+const { MessageEmbed } = require("discord.js");
 
 module.exports = {
   name: ["remindme", "remind"],
@@ -41,22 +42,28 @@ module.exports = {
       user = interaction.author;
     }
 
-    reason = reason.startsWith("to") || !reason.length ? reason : `to ${reason}`;
-    let reminderMessage = reason ? `Reminder **${reason}**!` : "Reminder!";
-    reminderMessage = user.toString().concat(" ", reminderMessage);
+    let reminderMessage = reason ? `**Reminder:** ${reason}` : "**Reminder!**";
+    const reminderEmbed = new MessageEmbed().setColor("#f0b111").setTitle("Reminder!");
+    if (reason) reminderEmbed.setDescription(reminderMessage);
 
     schedule.scheduleJob(date, () => {
       isSlash
-        ? interaction.followUp({ content: reminderMessage, allowedMentions: { parse: [], repliedUser: true } })
-        : interaction.reply({ content: reminderMessage, allowedMentions: { parse: [], repliedUser: true } });
+        ? interaction.followUp({ embeds: [reminderEmbed], allowedMentions: { parse: [], repliedUser: true } })
+        : interaction.reply({ embeds: [reminderEmbed], allowedMentions: { parse: [], repliedUser: true } });
       deleteReminder(interaction.id);
     });
 
     await interaction.defer?.();
+    const confirmEmbed = new MessageEmbed()
+      .setColor("#11f0ad")
+      .setTitle("New reminder")
+      .addField("**Time**", `<t:${unixTime(date)}>`);
+
+    if (reason) confirmEmbed.addField("**Reason**", reason);
 
     const msgObject = {
-      content: `**Set a reminder for <t:${unixTime(date)}> ${reason}!**`,
-      allowedMentions: { parse: [], repliedUser: true },
+      embeds: [confirmEmbed],
+      allowedMentions: { parse: [], repliedUser: false },
     };
     const msg = isSlash ? await interaction.editReply(msgObject) : await interaction.reply(msgObject);
 
