@@ -1,7 +1,7 @@
 require("dotenv").config();
 require("module-alias/register");
 const colors = require("colors");
-const mongoose = require("mongoose");
+const mongoose = require("mongoose").set("useFindAndModify", false);
 const { Client } = require("discord.js");
 const mongo = require("@utils/mongo.js");
 const { handleCoin } = require("@utils/coin");
@@ -14,7 +14,7 @@ const client = new Client({
     "GUILD_VOICE_STATES",
     "GUILD_MESSAGES",
     "DIRECT_MESSAGES",
-    "GUILD_EMOJIS",
+    "GUILD_EMOJIS_AND_STICKERS",
     "GUILD_MESSAGE_REACTIONS",
   ],
   partials: ["CHANNEL"],

@@ -53,8 +53,8 @@ module.exports = {
     const startButton = new MessageButton().setStyle("SUCCESS").setLabel("Start Game").setCustomId("start");
     const leaveButton = new MessageButton().setStyle("DANGER").setLabel("Leave Game").setCustomId("leave");
 
-    if (interaction?.options?.has("join")) {
-      const lobbyCode = interaction.options.get("join").options.get("lobby").value;
+    if (interaction?.options?.getSubCommand() === "join") {
+      const lobbyCode = interaction.options.getString("lobby").toUpperCase();
 
       if (!lobbies.has(lobbyCode)) {
         return await interaction.reply({ content: "🚫 **Error: Invalid lobby code**", ephemeral: true });

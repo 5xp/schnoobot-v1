@@ -18,7 +18,7 @@ module.exports = {
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
 
-    if (args?.[0] == "top" || interaction?.options?.has("top")) {
+    if (args?.[0] == "top" || interaction?.options?.getSubCommand() === "top") {
       await interaction.defer?.();
       const sortedIndex = await economySchema.find().sort({ dailystreak: -1 });
       const maxEntries = 10;

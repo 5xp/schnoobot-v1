@@ -11,7 +11,7 @@
   "dependencies": {
     "chrono-node": "^2.3.1",
     "colors": "^1.4.0",
-    "discord.js": "^13.0.0-dev.2e078e4.1625529824",
+    "discord.js": "^13.0.0-dev.4886ae2.1627300977",
     "dotenv": "^8.2.0",
     "ffmpeg": "0.0.4",
     "get-audio-duration": "^2.0.3",
@@ -27,8 +27,9 @@
     "youtube-dl-exec": "^1.2.4"
   },
   "_moduleAliases": {
-    "@root" : ".",
+    "@root": ".",
     "@schemas": "./schemas",
-    "@utils": "./utils"
+    "@utils": "./utils",
+    "@commands": "./commands"
   }
 }

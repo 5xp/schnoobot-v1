@@ -21,7 +21,7 @@ module.exports = {
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
 
-    if (args?.[0] === "top" || interaction?.options?.has("top")) {
+    if (args?.[0] === "top" || interaction?.options?.getSubCommand() === "top") {
       await interaction.defer?.();
       const sortedIndex = await economySchema.find().sort({ coins: -1 });
       const maxEntries = 10;
@@ -76,7 +76,7 @@ module.exports = {
       });
     } else {
       const user = isSlash
-        ? interaction.options.get("user")?.options?.get("user")?.user ?? interaction.user
+        ? interaction.options.getUser("user") ?? interaction.user
         : !args.length
         ? interaction.member.user
         : FindMember(args[0], interaction).user;
