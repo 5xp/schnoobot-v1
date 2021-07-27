@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const handlerFile = "command-handler.js";
-const { getPrefix } = require("@utils/guildsettings");
+const { getPrefix, getURLs } = require("@utils/guildsettings");
 
 module.exports = client => {
   client.commands = [];
@@ -55,10 +55,17 @@ module.exports = client => {
         }
       }
     } else {
-      // auto tiktok download
-      const url = content.match(/https?:\/\/(vm.tiktok.com[^\s"]+|www.tiktok.com[^\s"]+)/);
-      if (url) {
-        return client.commands.find(cmd => cmd.name.includes("dl")).execute(message, [url[0]], true);
+      // auto download
+      const { execute } = require("@commands/utility/dl");
+      const urlList = await getURLs(guild.id);
+
+      for (const url of urlList) {
+        const re = new RegExp(url + "[^\\s]+");
+        const dlURL = content.match(re);
+        if (dlURL) {
+          execute(message, [dlURL[0]], true);
+          break;
+        }
       }
     }
   });

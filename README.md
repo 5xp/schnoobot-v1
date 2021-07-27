@@ -23,7 +23,7 @@ Schnoobot uses the discord.js library and MongoDB database.
   - **daily**
   - **transfer**
 - **_Other features_**
-  - **auto tiktok download** - tiktok links will automatically be downloaded and sent
+  - **auto download** - add a url to a list to be automatically downloaded
   - **slash commands for most commands**
   - **money for chat activity**
 
@@ -31,7 +31,6 @@ Schnoobot uses the discord.js library and MongoDB database.
 
 - blacklisting commands/categories
 - command cooldowns
-- add custom auto-download links
 
 ## Invite
 
