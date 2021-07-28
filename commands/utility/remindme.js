@@ -35,7 +35,7 @@ module.exports = {
     const date = result[0]?.start?.date?.();
 
     if (isSlash) {
-      reason = interaction.options.get("reason").value;
+      reason = interaction.options.get("reason")?.value;
       user = interaction.user;
     } else {
       reason = content.replace(result?.[0].text, "").trim();
@@ -48,7 +48,10 @@ module.exports = {
 
     schedule.scheduleJob(date, () => {
       isSlash
-        ? interaction.followUp({ embeds: [reminderEmbed], allowedMentions: { parse: [], repliedUser: true } })
+        ? interaction.followUp({
+            content: user.toString(),
+            embeds: [reminderEmbed],
+          })
         : interaction.reply({ embeds: [reminderEmbed], allowedMentions: { parse: [], repliedUser: true } });
       deleteReminder(interaction.id);
     });
