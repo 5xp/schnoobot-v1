@@ -2,6 +2,7 @@ const path = require("path");
 const fs = require("fs");
 const handlerFile = "command-handler.js";
 const { getPrefix, getURLs } = require("@utils/guildsettings");
+const colors = require("colors");
 
 module.exports = client => {
   client.commands = [];
@@ -51,6 +52,9 @@ module.exports = client => {
             args.shift();
 
             execute(message, args, args.join(" "));
+
+            const currentTime = new Date().toTimeString().split(" ")[0];
+            console.log(`[${currentTime}] ${message.author.tag} used !${alias}: ${args.join(" ")}`.yellow);
           }
         }
       }
@@ -73,7 +77,7 @@ module.exports = client => {
   client.on("interactionCreate", interaction => {
     if (interaction.isCommand()) {
       const command = client.commands.find(cmd => cmd.name.includes(interaction.commandName));
-      let { disabled = false, required_perms = [], execute } = command;
+      let { name, disabled = false, required_perms = [], execute } = command;
 
       const missing_perms = required_perms.filter(permission => !interaction.member.permissions.has(permission));
       if (missing_perms.length) {
@@ -86,6 +90,10 @@ module.exports = client => {
       if (disabled) return interaction.reply({ content: "This command is disabled!", ephemeral: true });
 
       execute(interaction);
+
+      const currentTime = new Date().toTimeString().split(" ")[0];
+      const options = interaction.options._hoistedOptions.map(option => `${option.name}: ${option.value}`);
+      console.log(`[${currentTime}] ${interaction.user.tag} used /${name[0]}: ${options.join(", ")}`.yellow);
     }
   });
 };
