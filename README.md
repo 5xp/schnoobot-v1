@@ -22,6 +22,10 @@ Schnoobot uses the discord.js library and MongoDB database.
   - **limbo**
   - **daily**
   - **transfer**
+- **_Guild configuration_**
+  - **prefix**
+  - **blacklist**
+  - **autodl**
 - **_Other features_**
   - **auto download** - add a url to a list to be automatically downloaded
   - **slash commands for most commands**
@@ -29,7 +33,6 @@ Schnoobot uses the discord.js library and MongoDB database.
 
 ## Todo
 
-- blacklisting commands/categories
 - command cooldowns
 
 ## Invite

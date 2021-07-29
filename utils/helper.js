@@ -14,6 +14,11 @@ async function findMember(query, interaction) {
   return member;
 }
 
+function findChannel(query, interaction) {
+  const matches = query?.match(/^<#(\d+)>$/);
+  if (matches) return interaction.guild.channels.cache.get(matches[1]);
+}
+
 function findVoice(input, message) {
   // search cache with id
   let vc = message.guild.channels.cache.get(input);
@@ -69,4 +74,5 @@ module.exports = {
   trunc,
   randomRange,
   timeToString,
+  findChannel,
 };
