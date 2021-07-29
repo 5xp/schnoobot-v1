@@ -1,6 +1,6 @@
 const { awardPoints, getUserData } = require("@utils/coin");
 const numeral = require("numeral");
-const { FindMember } = require("@utils/helper");
+const { findMember } = require("@utils/helper");
 const Discord = require("discord.js");
 
 module.exports = {
@@ -18,7 +18,7 @@ module.exports = {
     let transfer = isSlash
       ? numeral(interaction.options.get("amount").value).value()
       : numeral(numeral(args[1]).format("0.00")).value();
-    let transferee = isSlash ? interaction.options.get("user").member : FindMember(args[0], interaction);
+    let transferee = isSlash ? interaction.options.get("user").member : findMember(args[0], interaction);
 
     if (!transferee) {
       interaction.reply(`To transfer, use this command: \`\`${module.exports.usage}\`\``);

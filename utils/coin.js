@@ -2,7 +2,7 @@ const msgCooldowns = new Set();
 const COOLDOWN_TIME = 10;
 // const cache = {};
 const economySchema = require("@schemas/economy-schema");
-const { RandomRange, TruncateDecimals } = require("@utils/helper");
+const { randomRange, trunc } = require("@utils/helper");
 const numeral = require("numeral");
 
 module.exports = {
@@ -32,11 +32,11 @@ async function activityPoints(user, time = null) {
       msgCooldowns.delete(user.id);
     }, COOLDOWN_TIME * 1000);
 
-    coins = RandomRange(SC_PER_MSG[0], SC_PER_MSG[1]);
+    coins = randomRange(SC_PER_MSG[0], SC_PER_MSG[1]);
   } else {
     // TODO: points for being in vc
   }
-  coins = TruncateDecimals(coins, 2);
+  coins = trunc(coins, 2);
   awardPoints(user, coins);
 }
 

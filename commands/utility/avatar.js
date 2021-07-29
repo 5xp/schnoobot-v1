@@ -1,5 +1,5 @@
 const Discord = require("discord.js");
-const { FindMember } = require("@utils/helper.js");
+const { findMember } = require("@utils/helper.js");
 
 module.exports = {
   name: ["avatar", "av", "pfp"],
@@ -16,15 +16,15 @@ module.exports = {
       desiredUser = interaction.options.get("user")?.user;
       if (!desiredUser) desiredUser = interaction.user;
     } else {
-      desiredUser = await FindMember(content, interaction)?.user;
+      const member = await findMember(content, interaction);
+      desiredUser = member?.user;
 
       if (!args.length) {
         desiredUser = interaction.member.user;
       }
 
       if (!desiredUser) {
-        interaction.reply("Could not find this user!");
-        return;
+        return interaction.reply("🚫 **Could not find this user!**");
       }
     }
     const avatarEmbed = new Discord.MessageEmbed()

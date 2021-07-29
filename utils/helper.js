@@ -1,31 +1,20 @@
 const fs = require("fs");
 const fetch = require("node-fetch");
 
-function FindMember(input, message) {
-  let newInput = input.toLowerCase();
-  let member = message.guild.members.cache.get(newInput);
+async function findMember(query, interaction) {
+  const members = await interaction.guild.members.search({ query, limit: 1 });
+  let member = members?.first();
 
-  // try search cache with displayname
   if (!member) {
-    member = message.guild.members.cache.filter(u => u.displayName.toLowerCase().includes(newInput)).first();
-  }
-
-  // try search cache with username
-  if (!member) {
-    member = message.guild.members.cache.filter(u => u.user.username.toLowerCase().includes(newInput)).first();
-  }
-
-  // try mention
-  if (!member) {
-    const matches = input.match(/^<@!?(\d+)>$/);
+    const matches = query.match(/^<@!?(\d+)>$/);
     if (!matches) return;
-    member = message.guild.members.cache.get(matches[1]);
+    member = interaction.guild.members.cache.get(matches[1]);
   }
 
   return member;
 }
 
-function FindVC(input, message) {
+function findVoice(input, message) {
   // search cache with id
   let vc = message.guild.channels.cache.get(input);
 
@@ -45,11 +34,6 @@ function FindVC(input, message) {
   return vc;
 }
 
-function JoinArgs(args) {
-  newArgs = args.length > 1 ? args.join(" ") : args;
-  return String(newArgs);
-}
-
 const downloadFile = async (url, path) => {
   const res = await fetch(url);
   const fileStream = fs.createWriteStream(path);
@@ -65,15 +49,11 @@ function sanitizeString(str) {
   return str.trim();
 }
 
-function CheckPermissions(user, permission) {
-  return (hasPermission = permission => user.hasPermission(permission));
-}
+trunc = (number, decimals) => Math.trunc(number * Math.pow(10, decimals)) / Math.pow(10, decimals);
 
-TruncateDecimals = (number, decimals) => Math.trunc(number * Math.pow(10, decimals)) / Math.pow(10, decimals);
+randomRange = (min, max) => Math.random() * (max - min) + min;
 
-RandomRange = (min, max) => Math.random() * (max - min) + min;
-
-function TimeToString(ms) {
+function timeToString(ms) {
   hours = Math.floor(ms / 60000 / 60);
   minutes = Math.floor((ms / 60000) % 60);
   if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
@@ -82,13 +62,11 @@ function TimeToString(ms) {
 }
 
 module.exports = {
-  FindMember,
-  FindVC,
-  JoinArgs,
+  findMember,
+  findVoice,
   downloadFile,
   sanitizeString,
-  CheckPermissions,
-  TruncateDecimals,
-  RandomRange,
-  TimeToString,
+  trunc,
+  randomRange,
+  timeToString,
 };

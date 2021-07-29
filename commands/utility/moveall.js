@@ -1,4 +1,4 @@
-const helper = require("@utils/helper.js");
+const { findVoice } = require("@utils/helper.js");
 module.exports = {
   name: ["moveall", "move", "m"],
   description: "move all members to another voice channel",
@@ -27,8 +27,8 @@ module.exports = {
       if (!args.length) {
         interaction.reply("missing arguments!");
       } else {
-        origin = args.length > 1 ? helper.FindVC(args[0], interaction) : interaction.member.voice.channel;
-        destination = args.length > 1 ? helper.FindVC(args[1], interaction) : helper.FindVC(args[0], interaction);
+        origin = args.length > 1 ? findVoice(args[0], interaction) : interaction.member.voice.channel;
+        destination = args.length > 1 ? findVoice(args[1], interaction) : findVoice(args[0], interaction);
         await moveToChannel(origin, destination);
       }
     }

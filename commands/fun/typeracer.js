@@ -2,7 +2,7 @@ const fs = require("fs");
 const levenshtein = require("js-levenshtein");
 const Discord = require("discord.js");
 const leaderboardSchema = require("@schemas/typeracer-leaderboard-schema");
-const helper = require("@utils/helper.js");
+const { findMember } = require("@utils/helper.js");
 
 module.exports = {
   name: ["typeracer", "type", "t"],
@@ -29,13 +29,13 @@ module.exports = {
     } else {
       switch (args[0]) {
         case "top":
-          ShowStats();
+          showStats();
           break;
         case "me":
-          ShowStats(message.author);
+          showStats(message.author);
           break;
         default:
-          ShowStats(helper.FindMember(args[0], message));
+          showStats(findMember(args[0], message));
           break;
       }
     }
@@ -52,7 +52,7 @@ module.exports = {
             let promptEmbed = new Discord.MessageEmbed()
               .setColor("#2af7ed")
               .setDescription(currentPrompt.replace(/ /g, " \u200B"));
-            msg.edit({ embeds: [promptEmbed] }).then(StartGame());
+            msg.edit({ embeds: [promptEmbed] }).then(startGame());
           }, 1000);
         }
 
@@ -66,17 +66,17 @@ module.exports = {
       updateTime();
     }
 
-    function StartGame() {
+    function startGame() {
       collector = message.channel.createMessageCollector(filter, { time: t * 1000 });
       timeStarted = Date.now();
 
       collector.on("collect", m => {
-        AnswerLogic(m);
+        answerLogic(m);
       });
       collector.on("end", collected => {});
     }
 
-    async function AnswerLogic(msg) {
+    async function answerLogic(msg) {
       if (finishedIDs.includes(msg.author.id)) return;
 
       let response = msg.content;
@@ -123,7 +123,7 @@ module.exports = {
       message.channel.send({ embeds: [summaryEmbed] });
     }
 
-    async function ShowStats(user) {
+    async function showStats(user) {
       const index = await leaderboardSchema.find().sort({ wpm: -1 });
       var statEmbed;
 

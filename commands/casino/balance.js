@@ -1,5 +1,5 @@
 const { getUserData, dailyIn } = require("@utils/coin");
-const { FindMember, TimeToString } = require("@utils/helper");
+const { findMember, timeToString } = require("@utils/helper");
 const numeral = require("numeral");
 const { MessageEmbed, MessageButton } = require("discord.js");
 const economySchema = require("@schemas/economy-schema");
@@ -79,7 +79,7 @@ module.exports = {
         ? interaction.options.getUser("user") ?? interaction.user
         : !args.length
         ? interaction.member.user
-        : FindMember(args[0], interaction).user;
+        : findMember(args[0], interaction).user;
 
       if (!user) {
         return interaction.reply(`To use this command: \`\`${module.exports.usage}\`\``);
