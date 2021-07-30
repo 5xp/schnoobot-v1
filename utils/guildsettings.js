@@ -42,47 +42,36 @@ async function setPrefix(guildId, prefix) {
   return;
 }
 
-async function addURL(guildId, url) {
-  if (urlCache.has(guildId)) {
-    if (urlCache.get(guildId).includes(url)) {
-      return;
-    }
+async function setURL(guildId, url) {
+  const urls = await getURLs(guildId);
+  if (urls.includes(url)) {
+    removeURL(guildId, url);
+    return false;
+  } else {
+    addURL(guildId, url);
+    return true;
   }
+}
 
+async function addURL(guildId, url) {
   const res = await settingsSchema.findByIdAndUpdate(
     guildId,
-    {
-      $addToSet: { autodl: url },
-    },
-    {
-      upsert: true,
-    }
+    { $addToSet: { autodl: url } },
+    { upsert: true, new: true }
   );
 
-  // make sure the url wasn't already in the db
-  const success = !res.autodl.includes(url);
-
-  if (success) res.autodl.push(url);
   urlCache.set(guildId, res.autodl);
-
-  if (success) return urlCache.get(guildId);
-  else throw { message: `\`${url}\` is already in the URL list.`, urls: urlCache.get(guildId) };
 }
 
 async function removeURL(guildId, url) {
-  const res = await settingsSchema.findByIdAndUpdate(guildId, {
-    $pull: { autodl: url },
-  });
-
-  // make sure the url was already in the db
-  const success = res.autodl.includes(url);
-
-  if (success) res.autodl.splice(res.autodl.indexOf(url), 1);
-
+  const res = await settingsSchema.findByIdAndUpdate(
+    guildId,
+    {
+      $pull: { autodl: url },
+    },
+    { new: true }
+  );
   urlCache.set(guildId, res.autodl);
-
-  if (success) return urlCache.get(guildId);
-  else throw { message: `\`${url}\` was not found in the URL list.`, urls: urlCache.get(guildId) };
 }
 
 async function getURLs(guildId) {
@@ -162,8 +151,7 @@ async function checkBlacklisted(interaction, command) {
 module.exports = {
   getPrefix,
   setPrefix,
-  addURL,
-  removeURL,
+  setURL,
   getURLs,
   setBlacklist,
   getBlacklist,
