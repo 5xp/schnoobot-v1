@@ -80,9 +80,12 @@ module.exports = {
           .addFields(fields);
 
         if (completelyBlacklisted.length)
-          listEmbed.addField("Completely blacklisted commands or categories", completelyBlacklisted.join(", "));
+          listEmbed.addField("Blacklisted from guild", completelyBlacklisted.join(", "));
 
-        interaction.reply({ embeds: [listEmbed] });
+        if (!completelyBlacklisted.length && !fields.length)
+          return interaction.reply("⚠ **This server's blacklist is empty.**");
+
+        interaction.reply({ embeds: [listEmbed], ephemeral: true });
       } else {
         let input, channel, res;
         if (isSlash) {
@@ -115,12 +118,12 @@ module.exports = {
           const str = channel
             ? `✅ **Added \`${input}\` to ${channel} blacklist!**`
             : `✅ **Added \`${input}\` to blacklist!**`;
-          interaction.reply(str);
+          interaction.reply({ content: str, ephemeral: true });
         } else {
           const str = channel
             ? `✅ **Removed \`${input}\` from ${channel} blacklist!**`
             : `✅ **Removed \`${input}\` from blacklist!**`;
-          interaction.reply(str);
+          interaction.reply({ content: str, ephemeral: true });
         }
       }
     } catch (error) {
