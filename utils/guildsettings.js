@@ -114,7 +114,7 @@ async function getBlacklist(guildId) {
   } else {
     const res = await settingsSchema.findById(guildId);
     if (res?.blacklist) blacklistCache.set(guildId, res.blacklist);
-    else blacklistcache.set(guildId, []);
+    else blacklistCache.set(guildId, []);
     return blacklistCache.get(guildId);
   }
 }
