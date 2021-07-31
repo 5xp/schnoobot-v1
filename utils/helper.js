@@ -2,6 +2,7 @@ const fs = require("fs");
 const fetch = require("node-fetch");
 
 async function findMember(query, interaction) {
+  if (!query) return;
   const members = await interaction.guild.members.search({ query, limit: 1 });
   let member = members?.first();
 
@@ -15,25 +16,29 @@ async function findMember(query, interaction) {
 }
 
 function findChannel(query, interaction) {
+  if (!query) return;
   const matches = query?.match(/^<#(\d+)>$/);
   if (matches) return interaction.guild.channels.cache.get(matches[1]);
 }
 
-function findVoice(input, message) {
+function findVoice(query, interaction) {
+  if (!query) return;
+
+  query = query.toLowerCase();
   // search cache with id
-  let vc = message.guild.channels.cache.get(input);
+  let vc = interaction.guild.channels.cache.get(query);
 
   if (!vc) {
-    const matches = input.match(/^<#(\d+)>$/);
+    const matches = query.match(/^<#(\d+)>$/);
     if (matches) {
-      vc = message.guild.channels.cache.get(matches[1]);
+      vc = interaction.guild.channels.cache.get(matches[1]);
     }
   }
 
   // search cache with name
   if (!vc) {
-    vc = message.guild.channels.cache
-      .filter(channel => channel.name.toLowerCase().includes(input) && channel.type === "voice")
+    vc = interaction.guild.channels.cache
+      .filter(channel => channel.name.toLowerCase().includes(query) && channel.type === "GUILD_VOICE")
       .first();
   }
   return vc;

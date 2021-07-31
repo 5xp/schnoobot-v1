@@ -1,4 +1,7 @@
 const { findVoice } = require("@utils/helper.js");
+
+// TODO if query matches multiple voice channels, give button options
+
 module.exports = {
   name: ["moveall", "move", "m"],
   description: "move all members to another voice channel",
@@ -20,12 +23,12 @@ module.exports = {
 
     if (isSlash) {
       await interaction.defer({ ephemeral: true });
-      origin = interaction.options.get("from")?.channel || interaction.member.voice.channel;
-      destination = interaction.options.get("destination").channel;
+      origin = interaction.options.getChannel("from") ?? interaction.member.voice.channel;
+      destination = interaction.options.getChannel("destination");
       await moveToChannel(origin, destination);
     } else {
       if (!args.length) {
-        interaction.reply("missing arguments!");
+        interaction.reply(`⚠ **To use this command: \`${module.exports.usage}\`**`);
       } else {
         origin = args.length > 1 ? findVoice(args[0], interaction) : interaction.member.voice.channel;
         destination = args.length > 1 ? findVoice(args[1], interaction) : findVoice(args[0], interaction);
@@ -43,34 +46,30 @@ module.exports = {
           })
         );
 
-        console.log(
-          `${interaction.member.displayName} moved ${origin.members.size} members from ${origin.name} to ${destination.name}!`
-            .green
-        );
         if (isSlash)
           interaction.editReply(
-            `✅ **Successfully moved ${origin.members.size} members from <#${origin.id}> to <#${destination.id}>**`
+            `✅ **Moved ${origin.members.size} members from <#${origin.id}> to <#${destination.id}>!**`
           );
         else
           interaction.reply(
-            `✅ **Successfully moved ${origin.members.size} members from <#${origin.id}> to <#${destination.id}>**`
+            `✅ **Moved ${origin.members.size} members from <#${origin.id}> to <#${destination.id}>!**`
           );
       } catch (error) {
-        if (isSlash) interaction.editReply(`🚫 **${error}**`);
-        else interaction.reply(`🚫 **${error}**`);
+        if (isSlash) interaction.editReply(error.message);
+        else interaction.reply(error.message);
         return;
       }
 
       function checkValid(origin, destination) {
         if (!interaction.member.voice.channel) {
-          throw new Error("you must be in a voice channel");
-        } else if (origin == null || destination == null || destination.type !== "voice") {
-          throw new Error("invalid channel");
-        } else if (!interaction.member.permissionsIn(destination).has("CONNECT")) {
-          throw new Error("you do not have permission to connect to this channel");
-        } else if (origin === destination) {
+          throw new Error("🚫 **You must be in a voice channel.**");
+        } else if (origin == null || destination == null || destination.type !== "GUILD_VOICE") {
           console.log({ origin, destination });
-          throw new Error("identical channel");
+          throw new Error("🚫 **Invalid channel.**");
+        } else if (!interaction.member.permissionsIn(destination).has("CONNECT")) {
+          throw new Error("🚫 **You do not have permission to connect to this channel.**");
+        } else if (origin === destination) {
+          throw new Error("🚫 **Identical channel.**");
         }
       }
     }
