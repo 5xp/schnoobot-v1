@@ -8,10 +8,14 @@ module.exports = {
   description: "help",
   usage: `${process.env.PREFIX}help <command?>`,
   slash: true,
-  options: [{ name: "command", type: "STRING", description: "get detailed help for a specific command", required: false }],
+  options: [
+    { name: "command", type: "STRING", description: "get detailed help for a specific command", required: false },
+  ],
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
-    const isOwner = isSlash ? interaction.user.id === interaction.client.application.owner.id : interaction.author.id === interaction.client.application.owner.id;
+    const isOwner = isSlash
+      ? interaction.user.id === interaction.client.application.owner.id
+      : interaction.author.id === interaction.client.application.owner.id;
     let { client } = interaction;
     let currentPage = 0;
     let cmdlist = {};
@@ -46,7 +50,10 @@ module.exports = {
       const leftButton = new MessageButton().setEmoji("◀").setStyle("PRIMARY").setCustomId("left");
       const rightButton = new MessageButton().setEmoji("▶").setStyle("PRIMARY").setCustomId("right");
       const msgObject = () => {
-        return { components: [{ type: 1, components: [leftButton, rightButton] }], embeds: [GetEmbedGeneric(currentPage)] };
+        return {
+          components: [{ type: 1, components: [leftButton, rightButton] }],
+          embeds: [getGenericEmbed(currentPage)],
+        };
       };
 
       const msg = isSlash ? await interaction.editReply(msgObject()) : await interaction.reply(msgObject());
@@ -68,12 +75,12 @@ module.exports = {
       });
     } else {
       let desiredCmd = isSlash ? interaction.options.get("command").value.toLowerCase() : args[0].toLowerCase();
-      let embed = GetEmbedSpecific(desiredCmd);
+      let embed = getDetailedEmbed(desiredCmd);
       if (embed) interaction.reply({ embeds: [embed] });
-      else interaction.reply("invalid command!");
+      else interaction.reply(`🚫 **\`${desiredCmd}\` is not a valid command.**`);
     }
 
-    function GetEmbedGeneric(page) {
+    function getGenericEmbed(page) {
       var helpEmbed = new MessageEmbed();
       category = Object.keys(cmdlist)[page];
       arr = cmdlist[category];
@@ -84,19 +91,22 @@ module.exports = {
         .setFooter(`Page ${page + 1}/${Object.keys(cmdlist).length}`);
     }
 
-    function GetEmbedSpecific(cmd) {
-      cmd = client.commands.filter(command => {
-        return command.name.includes(cmd);
-      })[0];
-      if (cmd == undefined) return undefined;
-      var helpEmbed = new MessageEmbed();
+    function getDetailedEmbed(cmd) {
+      cmd = client.commands.filter(command => command.name.includes(cmd))[0];
+
+      if (!cmd) return;
+
+      const helpEmbed = new MessageEmbed();
+
       helpEmbed
         .setColor("#f03e1f")
         .setTitle(`Showing details for ${process.env.PREFIX}${cmd.name[0] || cmd.name}`)
         .addField("**Description**", cmd.description);
+
       if (cmd.usage) helpEmbed.addField("**Usage**", `\`${cmd.usage}\``, true);
-      if (cmd.alias) helpEmbed.addField("**Aliases**", cmd.alias.join(", "));
-      if (cmd.required_perms) helpEmbed.addField("**Permissions required**", cmd.required_perms.map(cmd => `\`${cmd}\``).join(", "));
+      if (cmd.name.length > 1) helpEmbed.addField("**Aliases**", cmd.name.join(", "));
+      if (cmd.required_perms)
+        helpEmbed.addField("**Permissions required**", cmd.required_perms.map(cmd => `\`${cmd}\``).join(", "));
 
       return helpEmbed;
     }
