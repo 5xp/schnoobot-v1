@@ -15,16 +15,17 @@ module.exports = {
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
 
-    let transfer = isSlash
-      ? numeral(interaction.options.get("amount").value).value()
-      : numeral(numeral(args[1]).format("0.00")).value();
-    let transferee = isSlash ? interaction.options.get("user").member : findMember(args[0], interaction);
+    let transferAmount = isSlash
+      ? +numeral(interaction.options.getString("amount").toLowerCase()).format("0.00")
+      : +numeral(args[1]?.toLowerCase()).format("0.00");
+
+    let transferee = isSlash ? interaction.options.getMember("user") : await findMember(args[0], interaction);
 
     if (!transferee) {
-      interaction.reply(`To transfer, use this command: \`\`${module.exports.usage}\`\``);
+      interaction.reply(`🚫 **To transfer, use this command: \`${module.exports.usage}\`**`);
       return;
     } else if (interaction.member === transferee) {
-      interaction.reply(`you cannot transfer to yourself!`);
+      interaction.reply("🚫 **You cannot transfer to yourself.**");
       return;
     }
 
@@ -34,26 +35,26 @@ module.exports = {
     const balance = +data.coins.toString();
     const transfereeBalance = transfereeData?.coins ? +transfereeData.coins.toString() : 0;
 
-    if (transfer > balance) {
+    if (transferAmount > balance) {
       return interaction.reply(`insufficient balance! Your balance is **${numeral(balance).format("0,0.00")}**.`);
-    } else if (transfer < 0.01) {
+    } else if (transferAmount < 0.01) {
       return interaction.reply(`you must transfer more than $0!`);
     }
 
     let transferEmbed = new Discord.MessageEmbed()
       .setColor("#00e394")
       .setTitle(`${interaction.member.displayName}'s transfer to ${transferee.displayName}`)
-      .addField("**Transfer**", numeral(transfer).format("$0,0.00"), true)
-      .addField("**New Balance**", numeral(balance - transfer).format("$0,0.00"), true)
+      .addField("**Transfer**", numeral(transferAmount).format("$0,0.00"), true)
+      .addField("**New Balance**", numeral(balance - transferAmount).format("$0,0.00"), true)
       .addField(
         `**${transferee.displayName}'s Balance**`,
-        numeral(transfereeBalance + transfer).format("$0,0.00"),
+        numeral(transfereeBalance + transferAmount).format("$0,0.00"),
         true
       );
 
     interaction.reply({ embeds: [transferEmbed], allowedMentions: { repliedUser: false } });
 
-    awardPoints(interaction.member, -transfer);
-    awardPoints(transferee, transfer);
+    awardPoints(interaction.member, -transferAmount);
+    awardPoints(transferee, transferAmount);
   },
 };
