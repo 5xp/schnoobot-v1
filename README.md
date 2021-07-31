@@ -34,9 +34,10 @@ Schnoobot uses the discord.js library and MongoDB database.
 ## Todo
 
 - command cooldowns
+- command whitelist
 
 ## Invite
 
-[Invite Schnoobot to your Discord using this link.](https://discord.com/api/oauth2/authorize?client_id=744858122673455177&permissions=3811953728&scope=applications.commands%20bot)
+[Invite Schnoobot to your Discord using this link](https://discord.com/api/oauth2/authorize?client_id=744858122673455177&permissions=3811953728&scope=applications.commands%20bot)
 
 Add me on Discord (chris#4000) if there are any issues.
