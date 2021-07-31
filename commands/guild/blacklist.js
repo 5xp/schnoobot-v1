@@ -83,7 +83,7 @@ module.exports = {
           listEmbed.addField("Blacklisted from guild", completelyBlacklisted.join(", "));
 
         if (!completelyBlacklisted.length && !fields.length)
-          return interaction.reply("⚠ **This server's blacklist is empty.**");
+          return interaction.reply({ content: "⚠ **This server's blacklist is empty.**", ephemeral: true });
 
         interaction.reply({ embeds: [listEmbed], ephemeral: true });
       } else {

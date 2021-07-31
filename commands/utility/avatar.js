@@ -1,4 +1,4 @@
-const Discord = require("discord.js");
+const { MessageEmbed } = require("discord.js");
 const { findMember } = require("@utils/helper.js");
 
 module.exports = {
@@ -24,10 +24,10 @@ module.exports = {
       }
 
       if (!desiredUser) {
-        return interaction.reply("🚫 **Could not find this user!**");
+        return interaction.reply("🚫 **Could not find this user.**");
       }
     }
-    const avatarEmbed = new Discord.MessageEmbed()
+    const avatarEmbed = new MessageEmbed()
       .setColor("#005eff")
       .setAuthor(`${desiredUser.username}'s avatar`)
       .setImage(desiredUser.avatarURL(avatarFormat));

@@ -1,5 +1,5 @@
 const { getUserData, dailyIn } = require("@utils/coin");
-const { findMember, timeToString } = require("@utils/helper");
+const { findMember } = require("@utils/helper");
 const numeral = require("numeral");
 const { MessageEmbed, MessageButton } = require("discord.js");
 const economySchema = require("@schemas/economy-schema");
@@ -75,32 +75,33 @@ module.exports = {
         }
       });
     } else {
-      const user = isSlash
+      const member = isSlash
         ? interaction.options.getUser("user") ?? interaction.user
         : !args.length
-        ? interaction.member.user
-        : findMember(args[0], interaction).user;
+        ? interaction.member
+        : await findMember(args[0], interaction);
 
-      if (!user) {
-        return interaction.reply(`To use this command: \`\`${module.exports.usage}\`\``);
-      }
+      const user = isSlash ? member : member?.user;
 
-      let data = await getUserData(user);
+      if (!user) return interaction.reply("🚫 **Could not find this user.**");
 
-      let balance = data?.coins ? +data.coins.toString() : "0";
-      let lastdaily = data?.lastdaily;
-      let streak = data?.dailystreak ? data.dailystreak + "🔥" : "0";
+      const data = await getUserData(user);
 
-      let dailyAvailable = dailyIn(lastdaily);
+      const balance = data?.coins ? +data.coins.toString() : "0";
+      const lastdaily = data?.lastdaily;
+      const streak = data?.dailystreak ? data.dailystreak + "🔥" : "0";
+
+      const dailyAvailable = dailyIn(lastdaily);
       const timestamp = Math.floor((Date.now() + dailyAvailable) / 1000);
-      let dailystr = dailyAvailable === true ? "now" : `<t:${timestamp}:R>\n<t:${timestamp}:t>`;
+      const dailystr = dailyAvailable === true ? "now" : `<t:${timestamp}:R>\n<t:${timestamp}:t>`;
 
-      let balanceEmbed = new MessageEmbed()
+      const balanceEmbed = new MessageEmbed()
         .setColor("#0000FF")
         .setAuthor(`${user.username}'s balance`, user.avatarURL())
         .addField("**Balance**", numeral(balance).format("$0,0.00"), true)
         .addField("**Daily available**", dailystr, true)
         .addField("**Streak**", streak, true);
+
       interaction.reply({ embeds: [balanceEmbed], allowedMentions: { repliedUser: false } });
     }
   },
