@@ -38,7 +38,7 @@ module.exports = {
       const urls = await getURLs(interaction.guild.id);
 
       if (!urls.length) {
-        return interaction.reply("⚠ **This server's auto-dl list is empty.**");
+        return interaction.reply({ content: "⚠ **This server's auto-dl list is empty.**", ephemeral: true });
       }
 
       interaction.reply({ embeds: [listEmbed(urls)], ephemeral: true });
