@@ -63,8 +63,7 @@ module.exports = {
       function checkValid(origin, destination) {
         if (!interaction.member.voice.channel) {
           throw new Error("🚫 **You must be in a voice channel.**");
-        } else if (origin == null || destination == null || destination.type !== "GUILD_VOICE") {
-          console.log({ origin, destination });
+        } else if (!origin || !destination || destination.type !== "GUILD_VOICE") {
           throw new Error("🚫 **Invalid channel.**");
         } else if (!interaction.member.permissionsIn(destination).has("CONNECT")) {
           throw new Error("🚫 **You do not have permission to connect to this channel.**");

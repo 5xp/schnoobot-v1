@@ -1,4 +1,4 @@
-const Discord = require("discord.js");
+const { MessageAttachment } = require("discord.js");
 const youtubedl = require("youtube-dl-exec");
 const fs = require("fs");
 const { getVideoDurationInSeconds } = require("get-video-duration");
@@ -121,7 +121,7 @@ module.exports = {
 
       if (failedToCompress) return;
 
-      const attachment = new Discord.MessageAttachment(path).setName(`video.${ext}`);
+      const attachment = new MessageAttachment(path).setName(`video.${ext}`);
 
       if (isSlash) {
         await interaction.editReply({ content: null, files: [attachment] }).catch(async error => {
