@@ -135,9 +135,11 @@ async function removeBlacklist(guildId, data) {
 async function checkBlacklisted(interaction, command) {
   const { guild, channel } = interaction;
   const { name, category } = command;
-  const blacklist = await getBlacklist(guild.id);
 
-  if (category === "guild") return false;
+  // no blacklist in dms and prevent blacklisting guild config
+  if (!guild || category === "guild") return false;
+
+  const blacklist = await getBlacklist(guild.id);
 
   if (name[0] in blacklist) {
     if (blacklist[name[0]].includes(channel.id) || blacklist[name[0]].includes(null)) return true;
