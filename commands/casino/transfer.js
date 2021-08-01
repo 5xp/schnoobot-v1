@@ -27,6 +27,8 @@ module.exports = {
     }
 
     const balance = await getBalance(interaction.member.id);
+    if (transferAmount === "all") transferAmount = balance;
+
     const transfereeBalance = await getBalance(transferee.id);
 
     if (transferAmount > balance) {
