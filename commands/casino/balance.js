@@ -1,4 +1,4 @@
-const { getUserData, dailyIn } = require("@utils/coin");
+const { getUserData, checkDailyAvailable, formatMoney } = require("@utils/economy");
 const { findMember } = require("@utils/helper");
 const numeral = require("numeral");
 const { MessageEmbed, MessageButton } = require("discord.js");
@@ -85,22 +85,19 @@ module.exports = {
 
       if (!user) return interaction.reply("🚫 **Could not find this user.**");
 
-      const data = await getUserData(user);
+      const res = await getUserData(user.id);
+      const { coins: balance = 0, lastdaily: lastDaily = 0, dailystreak: dailyStreak = 0 } = res;
 
-      const balance = data?.coins ? +data.coins.toString() : "0";
-      const lastdaily = data?.lastdaily;
-      const streak = data?.dailystreak ? data.dailystreak + "🔥" : "0";
-
-      const dailyAvailable = dailyIn(lastdaily);
+      const dailyAvailable = checkDailyAvailable(lastDaily);
       const timestamp = Math.floor((Date.now() + dailyAvailable) / 1000);
       const dailystr = dailyAvailable === true ? "now" : `<t:${timestamp}:R>\n<t:${timestamp}:t>`;
 
       const balanceEmbed = new MessageEmbed()
         .setColor("#0000FF")
         .setAuthor(`${user.username}'s balance`, user.avatarURL())
-        .addField("**Balance**", numeral(balance).format("$0,0.00"), true)
-        .addField("**Daily available**", dailystr, true)
-        .addField("**Streak**", streak, true);
+        .addField("**Balance**", formatMoney(balance), true)
+        .addField("**Daily Available**", dailystr, true)
+        .addField("**Streak**", `${dailyStreak || 0}🔥`, true);
 
       interaction.reply({ embeds: [balanceEmbed], allowedMentions: { repliedUser: false } });
     }

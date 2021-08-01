@@ -1,15 +1,14 @@
 const { MessageEmbed } = require("discord.js");
-const { awardPoints, getUserData } = require("@utils/coin");
-const numeral = require("numeral");
+const { awardMoney, getBalance, formatMoney, formatWager } = require("@utils/economy");
 
 module.exports = {
   name: ["flip", "coinflip"],
   description: "flip a coin",
   usage: `${process.env.PREFIX}flip <heads/tails> <bet>`,
   async execute(message, args) {
-    if (args[0] !== undefined && args[1] !== undefined) {
+    if (args[0] && args[1]) {
       var input = args[0].toLowerCase();
-      var wager = args[1].toLowerCase() === "all" ? "all" : numeral(numeral(args[1]).format("0.00")).value();
+      var wager = formatWager(args[1]);
     } else {
       return message.reply(`to play, use this command: \`${module.exports.usage}\``);
     }
@@ -28,12 +27,11 @@ module.exports = {
         return;
     }
 
-    let data = await getUserData(message.author);
-    const balance = data === null ? 0 : +data.coins.toString();
+    const balance = await getBalance(message.author.id);
     if (wager === "all") wager = balance;
 
     if (wager > balance) {
-      return message.reply(`insufficient balance! Your balance is **${numeral(balance).format("$0,0.00")}**.`);
+      return message.reply(`insufficient balance! Your balance is **${formatMoney(balance)}**.`);
     } else if (wager < 0.01) {
       return message.reply(`you must bet more than $0!`);
     }
@@ -51,18 +49,18 @@ module.exports = {
     if (input == flip) {
       var end = "**You won!** ";
       flipEmbed.setColor("#2bff00");
-      flipEmbed.addField("**Net Gain**", numeral(wager).format("$0,0.00"), true);
-      flipEmbed.addField("**Balance**", numeral(balance + wager).format("$0,0.00"), true);
-      awardPoints(message.author, wager);
+      flipEmbed.addField("**Net Gain**", formatMoney(wager), true);
+      flipEmbed.addField("**Balance**", formatMoney(balance + wager), true);
+      awardMoney(message.author.id, wager);
     } else {
       var end = "**You lost!** ";
       flipEmbed.setColor("#ff0000");
-      flipEmbed.addField("**Net Gain**", numeral(-wager).format("$0,0.00"), true);
-      flipEmbed.addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true);
-      awardPoints(message.author, -wager);
+      flipEmbed.addField("**Net Gain**", formatMoney(-wager), true);
+      flipEmbed.addField("**Balance**", formatMoney(balance - wager), true);
+      awardMoney(message.author.id, -wager);
     }
 
-    const str = flip == 0 ? end + `The coin landed on **heads**!` : end + `The coin landed on **tails**!`;
+    const str = flip === 0 ? end + `The coin landed on **heads**!` : end + `The coin landed on **tails**!`;
 
     flipEmbed.setDescription(str);
 

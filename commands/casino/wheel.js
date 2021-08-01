@@ -1,5 +1,5 @@
 const { MessageEmbed } = require("discord.js");
-const { awardPoints, getUserData } = require("@utils/coin");
+const { awardMoney, getUserData } = require("@utils/economy");
 const numeral = require("numeral");
 const INPUT_TYPES = ["red", "black", "even", "odd", "low", "high", "number"];
 const DIGIT = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
@@ -47,12 +47,12 @@ module.exports = {
       wheelEmbed.setColor("#2bff00");
       wheelEmbed.addField("**Net Gain**", numeral(wager * roll[type][1]).format("$0,0.00"), true);
       wheelEmbed.addField("**Balance**", numeral(balance + wager * roll[type][1]).format("$0,0.00"), true);
-      awardPoints(message.author, wager * roll[type][1]);
+      awardMoney(message.author.id, wager * roll[type][1]);
     } else {
       wheelEmbed.setColor("#ff0000");
       wheelEmbed.addField("**Net Gain**", numeral(-wager).format("$0,0.00"), true);
       wheelEmbed.addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true);
-      awardPoints(message.author, -wager);
+      awardMoney(message.author.id, -wager);
     }
     const clr = roll.color !== "red" && roll.color !== "black" ? "🟢" : roll.color == "red" ? "🔴" : "⚫";
     const digits =

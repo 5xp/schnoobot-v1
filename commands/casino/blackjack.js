@@ -1,64 +1,46 @@
 const { MessageEmbed, MessageButton, MessageActionRow } = require("discord.js");
-const { awardPoints, getUserData } = require("@utils/coin");
-const numeral = require("numeral");
-var blackjackCache = {};
+const { awardMoney, getBalance, formatMoney, formatWager } = require("@utils/economy");
 
 module.exports = {
   name: ["blackjack", "bj"],
   description: "beat dealer's hand without going over 21; dealer stands on all 17s",
   usage: `${process.env.PREFIX}blackjack <bet>`,
   async execute(message, args) {
-    if (blackjackCache[message.author.id]) {
-      var inProgress = true;
-    }
-    if (!inProgress) {
-      if (args[0] !== undefined) {
-        var wager = args[0].toLowerCase() === "all" ? "all" : numeral(numeral(args[0]).format("0.00")).value();
-      } else {
-        return message.reply(`to play, use this command: \`${module.exports.usage}\``);
-      }
-
-      let data = await getUserData(message.author);
-      var balance = data === null ? 0 : +data.coins.toString();
-      if (wager === "all") wager = balance;
-
-      if (wager > balance) {
-        return message.reply(`insufficient balance! Your balance is **${numeral(balance).format("$0,0.00")}**.`);
-      } else if (wager < 0.01) {
-        return message.reply(`you must bet more than $0!`);
-      }
-
-      // create shuffled deck
-      var deck = shuffle(createDeck()),
-        yourHand = { cards: [], score: 0, emoji_string: "" },
-        dealerHand = { cards: [], score: 0, emoji_string: "" },
-        hands = [dealerHand, yourHand];
-
-      // deal cards to player and dealer
-      for (var i = 0; i < 2; i++) {
-        drawCard(yourHand);
-        drawCard(dealerHand);
-      }
-
-      // hide one of dealer's cards
-      dealerHand.cards[1].hidden = true;
+    if (args[0]) {
+      var wager = formatWager(args[0]);
     } else {
-      // resume game
-      var deck = blackjackCache[message.author.id].deck,
-        yourHand = blackjackCache[message.author.id].hands[1],
-        dealerHand = blackjackCache[message.author.id].hands[0];
-      hands = [dealerHand, yourHand];
-      if (blackjackCache[message.author.id].collector !== undefined) blackjackCache[message.author.id].collector.stop();
-
-      let data = await getUserData(message.author);
-      var balance = data === null ? 0 : +data.coins.toString();
-      var wager = blackjackCache[message.author.id].wager < balance ? blackjackCache[message.author.id].wager : balance;
+      return message.reply(`to play, use this command: \`${module.exports.usage}\``);
     }
+
+    const balance = await getBalance(message.author.id);
+    if (wager === "all") wager = balance;
+
+    if (wager > balance) {
+      return message.reply(`insufficient balance! Your balance is **${formatMoney(balance)}**.`);
+    } else if (wager < 0.01) {
+      return message.reply(`you must bet more than $0!`);
+    }
+
+    // take money first to prevent cheating
+    awardMoney(message.author.id, -wager);
+
+    // create shuffled deck
+    var deck = shuffle(createDeck()),
+      yourHand = { cards: [], score: 0, emoji_string: "" },
+      dealerHand = { cards: [], score: 0, emoji_string: "" },
+      hands = [dealerHand, yourHand];
+
+    // deal cards to player and dealer
+    for (var i = 0; i < 2; i++) {
+      drawCard(yourHand);
+      drawCard(dealerHand);
+    }
+
+    // hide one of dealer's cards
+    dealerHand.cards[1].hidden = true;
 
     var bjEmbed = new MessageEmbed();
     update();
-
-    if (inProgress) message.channel.send("Finish your previous game first!");
 
     // user input
     let hitButton = new MessageButton().setLabel("Hit").setEmoji(emojis[HIT]).setStyle("SUCCESS").setCustomId("hit");
@@ -183,31 +165,25 @@ module.exports = {
         )
         .setTimestamp();
 
-      blackjackCache[message.author.id] = {
-        hands,
-        deck,
-        wager,
-      };
-
       if (finish) {
-        delete blackjackCache[message.author.id];
+        console.log(balance);
         if (end === 0) {
           bjEmbed.setDescription("**You won!**");
           bjEmbed.setColor("#00ff00");
-          bjEmbed.addField("**Net Gain**", numeral(wager).format("$0,0.00"), true);
-          bjEmbed.addField("**Balance**", numeral(balance + wager).format("$0,0.00"), true);
-          awardPoints(message.author, wager);
+          bjEmbed.addField("**Net Gain**", formatMoney(wager), true);
+          bjEmbed.addField("**Balance**", formatMoney(balance + wager), true);
+          awardMoney(message.author.id, wager * 2);
         } else if (end === 1) {
           bjEmbed.setDescription("**You drew!**");
           bjEmbed.setColor("#9ecfff");
-          bjEmbed.addField("**Net Gain**", numeral(0).format("$0,0.00"), true);
-          bjEmbed.addField("**Balance**", numeral(balance).format("$0,0.00"), true);
+          bjEmbed.addField("**Net Gain**", formatMoney(0), true);
+          bjEmbed.addField("**Balance**", formatMoney(balance), true);
+          awardMoney(message.author.id, wager);
         } else {
           bjEmbed.setDescription("**You lost!**");
           bjEmbed.setColor("#ff0000");
-          bjEmbed.addField("**Net Gain**", numeral(-wager).format("$0,0.00"), true);
-          bjEmbed.addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true);
-          awardPoints(message.author, -wager);
+          bjEmbed.addField("**Net Gain**", formatMoney(-wager), true);
+          bjEmbed.addField("**Balance**", formatMoney(balance - wager), true);
         }
       }
     }
@@ -258,24 +234,6 @@ function shuffle(deck) {
   }
   return deck;
 }
-
-async function removeReactions(message, id) {
-  const userReactions = message.reactions.cache.filter(reaction => reaction.users.cache.has(id));
-  try {
-    for (const reaction of userReactions.values()) {
-      await reaction.users.remove(id);
-    }
-  } catch (error) {
-    console.error("Failed to remove reactions.");
-  }
-}
-
-Math.seed = function (s) {
-  return function () {
-    s = Math.sin(s) * 10000;
-    return s - Math.floor(s);
-  };
-};
 
 const emojis = [
   "<:card_1:838283412904738847>",

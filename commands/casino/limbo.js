@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const { MessageEmbed } = require("discord.js");
 const numeral = require("numeral");
-const { awardPoints, getUserData } = require("@utils/coin");
+const { awardMoney, getBalance, formatMoney, formatWager, toNumber } = require("@utils/economy");
 
 module.exports = {
   name: "limbo",
@@ -17,17 +17,14 @@ module.exports = {
     var input, wager, user;
 
     if (isSlash) {
-      input = numeral(numeral(interaction.options.get("target").value).format("0.00")).value();
-      wager =
-        interaction.options.get("bet").value.toLowerCase() === "all"
-          ? "all"
-          : numeral(interaction.options.get("bet").value).value();
+      input = toNumber(interaction.options.getString("target"));
+      wager = formatWager(interaction.options.getString("bet"));
       user = interaction.user;
     } else {
       user = interaction.author;
       if (args[0] && args[1]) {
-        input = numeral(numeral(args[0]).format("0.00")).value();
-        wager = args[1].toLowerCase() === "all" ? "all" : numeral(numeral(args[1]).format("0.00")).value();
+        input = toNumber(args[0]);
+        wager = formatWager(args[1]);
       } else {
         return interaction.reply(`To play, use this command: \`${module.exports.usage}\``);
       }
@@ -35,12 +32,11 @@ module.exports = {
 
     if (input <= 1) return interaction.reply("Your target payout must be greater than 1.00x!");
 
-    const data = await getUserData(user);
-    var balance = data === null ? 0 : +data.coins.toString();
+    const balance = await getBalance(user.id);
     if (wager === "all") wager = balance;
 
     if (wager > balance) {
-      return interaction.reply(`insufficient balance! Your balance is **${numeral(balance).format("$0,0.00")}**.`);
+      return interaction.reply(`insufficient balance! Your balance is **${formatMoney(balance)}**.`);
     } else if (wager < 0.01) {
       return interaction.reply(`You must bet more than **$0**!`);
     }
@@ -51,7 +47,7 @@ module.exports = {
       .setTitle("📈 Limbo")
       .setDescription(`Multiplier: **${point.toFixed(2)}x**`)
       .addField("**Target Multipler**", input.toFixed(2) + "x", true)
-      .addField("**Bet**", numeral(wager).format("$0,0.00"), true)
+      .addField("**Bet**", formatMoney(wager), true)
       .addField("**Win Chance**", numeral(1 / input).format("0.00%"), true)
       .setFooter(user.username, user.avatarURL({ format: "png", dynamic: true, size: 2048 }))
       .setTimestamp();
@@ -59,14 +55,14 @@ module.exports = {
     if (input <= point) {
       const profit = wager * (input - 1);
       limboEmbed.setColor("#2bff00");
-      limboEmbed.addField("**Net Gain**", numeral(profit).format("$0,0.00"), true);
-      limboEmbed.addField("**Balance**", numeral(balance + profit).format("$0,0.00"), true);
-      awardPoints(user, profit);
+      limboEmbed.addField("**Net Gain**", formatMoney(profit), true);
+      limboEmbed.addField("**Balance**", formatMoney(balance + profit), true);
+      awardMoney(user.id, profit);
     } else {
       limboEmbed.setColor("#ff0000");
-      limboEmbed.addField("**Net Gain**", numeral(-wager).format("$0,0.00"), true);
-      limboEmbed.addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true);
-      awardPoints(user, -wager);
+      limboEmbed.addField("**Net Gain**", formatMoney(-wager), true);
+      limboEmbed.addField("**Balance**", formatMoney(balance - wager), true);
+      awardMoney(user.id, -wager);
     }
     interaction.reply({ embeds: [limboEmbed], allowedMentions: { repliedUser: false } });
   },

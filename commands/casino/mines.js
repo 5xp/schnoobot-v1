@@ -1,6 +1,6 @@
 const { MessageEmbed, MessageButton, MessageActionRow } = require("discord.js");
 const numeral = require("numeral");
-const { awardPoints, getUserData } = require("@utils/coin");
+const { awardMoney, getBalance, formatWager, formatMoney, toNumber } = require("@utils/economy");
 
 const columns = 5;
 const rows = 5;
@@ -10,11 +10,8 @@ const factorial = [
   1124000727777607680000, 25852016738884976640000, 620448401733239439360000, 15511210043330985984000000,
 ];
 
-// beginning state of all buttons
 const hiddenButton = new MessageButton().setLabel(" ").setStyle("SECONDARY").setCustomId("hiddenButton");
-// revealed gem
 const gemButton = new MessageButton().setEmoji("💎").setStyle("PRIMARY").setCustomId("gemButton"); //.setDisabled(true);
-// revealed mine
 const mineButton = new MessageButton().setEmoji("💣").setStyle("DANGER").setCustomId("mineButton"); //.setDisabled(true);
 const cashoutButton = new MessageButton().setLabel("Cash out").setStyle("SUCCESS").setCustomId("cashoutButton");
 
@@ -33,20 +30,17 @@ module.exports = {
 
     if (isSlash) {
       numMines = interaction.options.get("mines").value;
-      wager =
-        interaction.options.get("bet").value.toLowerCase() === "all"
-          ? "all"
-          : numeral(interaction.options.get("bet").value).value();
+      wager = formatWager(interaction.options.getString("bet"));
       user = interaction.user;
     } else {
       user = interaction.author;
+
       if (args[0] && args[1]) {
-        numMines = Math.round(numeral(args[0]).value());
-        wager = args[1].toLowerCase() === "all" ? "all" : numeral(numeral(args[1]).format("0.00")).value();
+        numMines = Math.floor(toNumber(args[0]));
+        wager = formatWager(args[1]);
       } else {
         return interaction.reply({
           content: `To play, use this command: \`${module.exports.usage}\``,
-          ephemeral: true,
         });
       }
     }
@@ -54,13 +48,12 @@ module.exports = {
     if (numMines < 1 || numMines > 24)
       return interaction.reply({ content: "You must have between 1-24 mines!", ephemeral: true });
 
-    const data = await getUserData(user);
-    var balance = data === null ? 0 : +data.coins.toString();
+    const balance = await getBalance(user.id);
     if (wager === "all") wager = balance;
 
     if (wager > balance) {
       return interaction.reply({
-        content: `Insufficient balance! Your balance is **${numeral(balance).format("$0,0.00")}**.`,
+        content: `Insufficient balance! Your balance is **${formatMoney(balance)}**.`,
         ephemeral: true,
       });
     } else if (wager < 0.01) {
@@ -68,8 +61,9 @@ module.exports = {
     }
 
     // set up
-    let grid = createArray(rows, columns);
-    let cells = [];
+    const grid = createArray(rows, columns);
+    const cells = [];
+
     for (var i = 0; i < rows; i++) {
       for (var j = 0; j < columns; j++) {
         grid[i][j] = new Cell(i, j);
@@ -96,8 +90,8 @@ module.exports = {
       .setTitle("💣 Mines")
       .setColor("#ffffff")
       .addField("**Mines**", numMines.toString(), true)
-      .addField("**Total Profit**", `${numeral(0).format("$0,0.00")} (1.00x)`, true)
-      .addField("**Profit on Next Tile**", `${numeral(nextProfit).format("$0,0.00")} (${nextMult.toFixed(2)}x)`, true)
+      .addField("**Total Profit**", `${formatMoney(0)} (1.00x)`, true)
+      .addField("**Profit on Next Tile**", `${formatMoney(nextProfit)} (${nextMult.toFixed(2)}x)`, true)
       .addField("**Win % of Next Tile**", `${numeral(winOdds).format("0.00%")}`, true);
 
     await interaction.defer?.();
@@ -151,12 +145,12 @@ module.exports = {
           .setDescription("**You lost!**")
           .setColor("ff0000")
           .addField("**Mines**", numMines.toString(), true)
-          .addField("**Profit**", numeral(-wager).format("$0,0.00"), true)
-          .addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true)
-          .addField("**Potential Profit**", `${numeral(nextProfit).format("$0,0.00")} (${nextMult.toFixed(2)}x)`, true)
+          .addField("**Profit**", formatMoney(-wager), true)
+          .addField("**Balance**", formatMoney(balance - wager), true)
+          .addField("**Potential Profit**", `${formatMoney(nextProfit)} (${nextMult.toFixed(2)}x)`, true)
           .addField("**Win %**", numeral(winOdds).format("0.00%"), true);
 
-        awardPoints(user, -wager);
+        awardMoney(user.id, -wager);
       } else {
         cellsRevealed++;
         let [currentProfit, currentMult, nextProfit, nextMult, winOdds, currentOdds] = calculateMultiplier(
@@ -175,22 +169,18 @@ module.exports = {
             .setDescription("**You won!**")
             .setTitle("💣 Mines")
             .setColor("#2bff00")
-            .addField("**Profit**", `${numeral(currentProfit).format("$0,0.00")} (${currentMult.toFixed(2)}x)`, true)
-            .addField("**Balance**", numeral(balance + currentProfit).format("$0,0.00"), true)
+            .addField("**Profit**", `${formatMoney(currentProfit)} (${currentMult.toFixed(2)}x)`, true)
+            .addField("**Balance**", formatMoney(balance + currentProfit), true)
             .addField("**Win %**", numeral(currentOdds).format("0.00%"), true);
 
-          awardPoints(user, nextProfit);
+          awardMoney(user.id, nextProfit);
         } else {
           minesEmbed = new MessageEmbed()
             .setTitle("💣 Mines")
             .setColor("#ffffff")
             .addField("**Mines**", numMines.toString(), true)
-            .addField("**Total Profit**", `${numeral(currentProfit).format("$0,0.00")} (${currentMult}x)`, true)
-            .addField(
-              "**Profit on Next Tile**",
-              `${numeral(nextProfit).format("$0,0.00")} (${nextMult.toFixed(2)}x)`,
-              true
-            )
+            .addField("**Total Profit**", `${formatMoney(currentProfit)} (${currentMult}x)`, true)
+            .addField("**Profit on Next Tile**", `${formatMoney(nextProfit)} (${nextMult.toFixed(2)}x)`, true)
             .addField("**Win % of Next Tile**", `${numeral(winOdds).format("0.00%")}`, true);
         }
       }
@@ -215,11 +205,11 @@ module.exports = {
           minesEmbed = new MessageEmbed()
             .setTitle("💣 Mines")
             .setColor("#2bff00")
-            .addField("**Profit**", `${numeral(currentProfit).format("$0,0.00")} (${currentMult.toFixed(2)}x)`, true)
-            .addField("**Balance**", numeral(balance + currentProfit).format("$0,0.00"), true)
+            .addField("**Profit**", `${formatMoney(currentProfit)} (${currentMult.toFixed(2)}x)`, true)
+            .addField("**Balance**", formatMoney(balance + currentProfit), true)
             .addField("**Win %**", numeral(currentOdds).format("0.00%"), true);
 
-          awardPoints(user, currentProfit);
+          awardMoney(user.id, currentProfit);
 
           buttonRows = createButtonGrid(rows, columns, grid);
           button.deferUpdate();
@@ -228,8 +218,8 @@ module.exports = {
           minesEmbed = new MessageEmbed()
             .setTitle("💣 Mines")
             .setColor("#ffffff")
-            .addField("**Profit**", `${numeral(0).format("$0,0.00")} (1.00x)`, true)
-            .addField("**Balance**", numeral(balance).format("$0,0.00"), true);
+            .addField("**Profit**", `${formatMoney(0)} (1.00x)`, true)
+            .addField("**Balance**", formatMoney(balance), true);
 
           buttonRows = createButtonGrid(rows, columns, grid);
           button.deferUpdate();

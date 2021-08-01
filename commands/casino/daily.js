@@ -1,5 +1,4 @@
-const { getDaily } = require("@utils/coin");
-const numeral = require("numeral");
+const { getDaily, formatMoney, checkDailyAvailable } = require("@utils/economy");
 const { MessageEmbed, MessageButton } = require("discord.js");
 const economySchema = require("@schemas/economy-schema");
 
@@ -73,26 +72,31 @@ module.exports = {
       });
     } else {
       const user = isSlash ? interaction.user : interaction.member.user;
-      const data = await getDaily(user);
-      const dailyEmbed = new MessageEmbed();
-      const timestamp = Math.floor((Date.now() + dailyAvailable) / 1000);
+      const { awarded, data } = await getDaily(user.id);
+      const { dailystreak: dailyStreak, lastdaily: lastDaily, coins: balance } = data;
 
-      if (data.awarded === true) {
+      const dailyAvailable = checkDailyAvailable(lastDaily);
+      const dailyAvailableTimestamp = Math.floor((Date.now() + dailyAvailable) / 1000);
+
+      const dailyEmbed = new MessageEmbed();
+
+      if (awarded) {
         dailyEmbed.setColor("#fc03d3");
+
         fields = [
           {
             name: "**Reward**",
-            value: data.reward,
+            value: formatMoney(1000 * dailyStreak),
             inline: true,
           },
           {
             name: "**New Balance**",
-            value: data.new_balance,
+            value: formatMoney(balance),
             inline: true,
           },
           {
             name: "**Streak**",
-            value: data.streak + "🔥",
+            value: dailyStreak + "🔥",
             inline: true,
           },
         ];
@@ -102,17 +106,17 @@ module.exports = {
         fields = [
           {
             name: "**Daily Available**",
-            value: `<t:${timestamp}:R>\n<t:${timestamp}:t>`,
+            value: `<t:${dailyAvailableTimestamp}:R>\n<t:${dailyAvailableTimestamp}:t>`,
             inline: true,
           },
           {
             name: "**Balance**",
-            value: data.new_balance,
+            value: formatMoney(balance),
             inline: true,
           },
           {
             name: "**Streak**",
-            value: data.streak + "🔥",
+            value: dailyStreak + "🔥",
             inline: true,
           },
         ];
