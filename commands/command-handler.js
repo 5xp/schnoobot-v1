@@ -1,18 +1,21 @@
 const path = require("path");
 const fs = require("fs");
 const handlerFile = "command-handler.js";
-const { getPrefix, getURLs, checkBlacklisted } = require("@utils/guildsettings");
+const { getPrefix, checkBlacklisted } = require("@utils/guildsettings");
 const colors = require("colors");
+const { Collection } = require("discord.js");
 
 module.exports = client => {
-  client.commands = [];
+  client.commands = new Collection();
+  client.features = new Collection();
 
-  const readCommands = async dir => {
+  // recursively read js files in each folder
+  const readFiles = async (dir, collection) => {
     const files = fs.readdirSync(path.join(__dirname, dir));
     for (const file of files) {
       const stat = fs.lstatSync(path.join(__dirname, dir, file));
       if (stat.isDirectory()) {
-        readCommands(path.join(dir, file));
+        readFiles(path.join(dir, file), collection);
       } else if (file !== handlerFile && file.endsWith(".js")) {
         const command = require(path.join(__dirname, dir, file));
         let { name, required_perms = [] } = command;
@@ -22,20 +25,21 @@ module.exports = client => {
 
         if (typeof name === "string") command.name = [name];
         if (typeof required_perms === "string") command.required_perms = [required_perms];
-        client.commands.push(command);
+        collection.set(command.name[0] ?? file, command);
       }
     }
   };
 
-  readCommands("");
+  readFiles("", client.commands);
+  readFiles("../chat-features", client.features);
 
   client.on("messageCreate", async message => {
     if (message.author.bot) return;
     const { member, content, guild } = message;
-    const prefix = await getPrefix(guild?.id);
+    const prefix = guild ? await getPrefix(guild) : process.env.PREFIX;
 
     if (content.startsWith(prefix)) {
-      for (const command of client.commands) {
+      for (const command of client.commands.values()) {
         let { name, disabled = false, required_perms = [], execute } = command;
 
         for (const alias of name) {
@@ -65,17 +69,8 @@ module.exports = client => {
         }
       }
     } else {
-      // auto download
-      const { execute } = require("@commands/utility/dl");
-      const urlList = await getURLs(guild.id);
-
-      for (const url of urlList) {
-        const re = new RegExp(url + "[^\\s]+");
-        const dlURL = content.match(re);
-        if (dlURL) {
-          execute(message, [dlURL[0]], true);
-          break;
-        }
+      for (const feature of client.features.values()) {
+        feature(message);
       }
     }
   });

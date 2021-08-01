@@ -4,7 +4,6 @@ const colors = require("colors");
 const mongoose = require("mongoose").set("useFindAndModify", false);
 const { Client } = require("discord.js");
 const mongo = require("@utils/mongo.js");
-const { handleCoin } = require("@utils/coin");
 const { loadReminders } = require("@utils/reminder");
 
 const client = new Client({
@@ -26,12 +25,11 @@ client.once("ready", async () => {
   client.user.setActivity(`for ${process.env.PREFIX}`, { type: "WATCHING" });
 
   await mongo().then(mongoose => {
-    console.log(`Connected to mongo!`.green);
+    console.log(`Connected to MongoDB!`.green);
   });
 
-  const commandHandler = require(`./commands/command-handler.js`);
+  const commandHandler = require(`@commands/command-handler.js`);
   commandHandler(client);
-  handleCoin(client);
   loadReminders(client);
 });
 
