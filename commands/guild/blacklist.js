@@ -53,15 +53,14 @@ module.exports = {
     },
   ],
   async execute(interaction, args) {
+    const { client, options, guild } = interaction;
     const isSlash = interaction.isCommand?.();
-    const commandArray = interaction.client.commands.map(command => command.name[0]);
-    const categoryArray = getCategoryArray();
     const subCommand = interaction?.options?.getSubCommand();
 
     // /blacklist list || !blacklist
     try {
       if (isSlash ? subCommand === "list" : !args.length) {
-        const blData = await getBlacklist(interaction.guild.id);
+        const blData = await getBlacklist(guild.id);
         const fields = [];
         const completelyBlacklisted = [];
 
@@ -75,7 +74,7 @@ module.exports = {
         }
 
         const listEmbed = new MessageEmbed()
-          .setTitle(`${interaction.guild.name}'s blacklist`)
+          .setTitle(`${guild.name}'s blacklist`)
           .setColor("DARK_RED")
           .addFields(fields);
 
@@ -89,28 +88,35 @@ module.exports = {
       } else {
         let input, channel, res;
         if (isSlash) {
-          input = interaction.options.getString(subCommand).toLowerCase();
+          input = options.getString(subCommand).toLowerCase();
 
-          if (subCommand === "command" && !commandArray.includes(input)) {
+          if (subCommand === "command") input = client.commands.findKey(command => command.name.includes(input));
+
+          if (subCommand === "command" && !input) {
             throw new Error(`🚫 **\`${input}\` is not a valid command.**`);
           }
 
-          channel = interaction.options.getChannel("channel");
+          channel = options.getChannel("channel");
 
           if (channel?.isText() || channel === null)
-            res = await setBlacklist(interaction.guild.id, { input, channel: channel?.id ?? null });
+            res = await setBlacklist(guild.id, { input, channel: channel?.id ?? null });
           else throw new Error(`🚫 **<#${channel.id}> is not a valid text channel.**`);
         } else {
           input = args[0];
 
-          if (!commandArray.concat(categoryArray).includes(input)) {
+          const command = client.commands.findKey(command => command.name.includes(input));
+          const category = client.commands.find(command => command.category === input);
+
+          input = category ?? command;
+
+          if (!command && !category) {
             throw new Error(`🚫 **\`${input}\` is not a valid category or command.**`);
           }
 
           channel = findChannel(args?.[1], interaction) ?? null;
 
           if (channel?.isText() || channel === null)
-            res = await setBlacklist(interaction.guild.id, { input, channel: channel?.id ?? null });
+            res = await setBlacklist(guild.id, { input, channel: channel?.id ?? null });
           else throw new Error(`🚫 **<#${channel.id}> is not a valid text channel.**`);
         }
 

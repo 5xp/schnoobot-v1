@@ -92,7 +92,7 @@ module.exports = {
     }
 
     function getDetailedEmbed(cmd) {
-      cmd = client.commands.filter(command => command.name.includes(cmd))[0];
+      cmd = client.commands.find(command => command.name.includes(cmd));
 
       if (!cmd) return;
 
