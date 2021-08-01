@@ -83,6 +83,7 @@ module.exports = {
         }
         button.update({ components: [], embeds: [bjEmbed] });
       } else if (button.customId === "double") {
+        awardMoney(message.author.id, -wager);
         wager *= 2;
         drawCard(yourHand);
         update();
@@ -166,7 +167,6 @@ module.exports = {
         .setTimestamp();
 
       if (finish) {
-        console.log(balance);
         if (end === 0) {
           bjEmbed.setDescription("**You won!**");
           bjEmbed.setColor("#00ff00");
