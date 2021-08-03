@@ -1,37 +1,42 @@
 const { MessageEmbed } = require("discord.js");
-const { awardMoney, getUserData } = require("@utils/economy");
+const { awardMoney, getBalance, formatMoney, formatWager } = require("@utils/economy");
 const numeral = require("numeral");
-const INPUT_TYPES = ["red", "black", "even", "odd", "low", "high", "number"];
-const DIGIT = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+const validTypes = ["red", "black", "even", "odd", "low", "high", "number"];
+const longDigits = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
 
 module.exports = {
   name: ["wheel", "roulette"],
   description: "roulette wheel",
   usage: `${process.env.PREFIX}wheel <bet type> <wager>\nbet types: red, black, even, odd, high, low, green, <number>`,
   async execute(message, args) {
-    if (args[0] !== undefined && args[1] !== undefined) {
+    if (args[0] && args[1]) {
       var input = args[0].toLowerCase();
-      var wager = args[1].toLowerCase() === "all" ? "all" : numeral(numeral(args[1]).format("0.00")).value();
+      var wager = formatWager(args[1]);
     } else {
-      return message.reply(`to play, use this command: \`${module.exports.usage}\``);
+      return message.reply(`⚠ To play, use this command: \`${module.exports.usage}\``);
     }
 
-    input = input == "green" ? 0 : input;
+    if (input === "green") input = 0;
 
-    let type = isNaN(+input) ? input : "number";
+    const type = isNaN(+input) ? input : "number";
 
-    if (!INPUT_TYPES.includes(type) || (type == "number" && (input > 36 || input < 0 || !Number.isInteger(+input)))) {
-      return message.reply(`to play, use this command: \`${module.exports.usage}\``);
+    input = type === "number" ? Math.floor(+input) : input;
+
+    if (type === "number" ? input < 0 || input > 36 : !validTypes.includes(type)) {
+      console.log({ type });
+      return message.reply(`⚠ To play, use this command: \`${module.exports.usage}\``);
     }
 
-    const data = await getUserData(message.author);
-    const balance = data === null ? 0 : +data.coins.toString();
+    const balance = await getBalance(message.author.id);
     if (wager === "all") wager = balance;
 
     if (wager > balance) {
-      return message.reply(`insufficient balance! Your balance is **${numeral(balance).format("$0,0.00")}**.`);
+      return message.reply({
+        content: `🚫 **Insufficient balance. Your balance is ${formatMoney(balance)}.**`,
+        ephemeral: true,
+      });
     } else if (wager < 0.01) {
-      return message.reply(`you must bet more than $0!`);
+      return message.reply({ content: `🚫 **You must bet more than $0.00.**`, ephemeral: true });
     }
 
     const roll = new Roll(input);
@@ -45,20 +50,20 @@ module.exports = {
 
     if (roll[type][0]) {
       wheelEmbed.setColor("#2bff00");
-      wheelEmbed.addField("**Net Gain**", numeral(wager * roll[type][1]).format("$0,0.00"), true);
-      wheelEmbed.addField("**Balance**", numeral(balance + wager * roll[type][1]).format("$0,0.00"), true);
+      wheelEmbed.addField("**Net Gain**", formatMoney(balance + wager * roll[type][1]), true);
+      wheelEmbed.addField("**Balance**", formatMoney(balance + wager * roll[type][1]), true);
       awardMoney(message.author.id, wager * roll[type][1]);
     } else {
       wheelEmbed.setColor("#ff0000");
-      wheelEmbed.addField("**Net Gain**", numeral(-wager).format("$0,0.00"), true);
-      wheelEmbed.addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true);
+      wheelEmbed.addField("**Net Gain**", formatMoney(-wager), true);
+      wheelEmbed.addField("**Balance**", formatMoney(balance - wager), true);
       awardMoney(message.author.id, -wager);
     }
     const clr = roll.color !== "red" && roll.color !== "black" ? "🟢" : roll.color == "red" ? "🔴" : "⚫";
     const digits =
       roll.num < 10
-        ? `:${DIGIT[+roll.num.toString()[0]]}:`
-        : `:${DIGIT[+roll.num.toString()[0]]}: :${DIGIT[+roll.num.toString()[1]]}:`;
+        ? `:${longDigits[+roll.num.toString()[0]]}:`
+        : `:${longDigits[+roll.num.toString()[0]]}::${longDigits[+roll.num.toString()[1]]}:`;
     const str = `${clr} ${digits}`;
 
     wheelEmbed.setDescription(str);

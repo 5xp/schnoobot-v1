@@ -26,19 +26,19 @@ module.exports = {
         input = toNumber(args[0]);
         wager = formatWager(args[1]);
       } else {
-        return interaction.reply(`To play, use this command: \`${module.exports.usage}\``);
+        return interaction.reply(`⚠ **To play, use this command: \`${module.exports.usage}\`**`);
       }
     }
 
-    if (input <= 1) return interaction.reply("Your target payout must be greater than 1.00x!");
+    if (input <= 1) return interaction.reply({ content: `⚠ **Your target payout must be greater than 1.00x.**`, ephemeral: true });
 
     const balance = await getBalance(user.id);
     if (wager === "all") wager = balance;
 
     if (wager > balance) {
-      return interaction.reply(`insufficient balance! Your balance is **${formatMoney(balance)}**.`);
+      return interaction.reply({ content: `🚫 **Insufficient balance. Your balance is ${formatMoney(balance)}.**`, ephemeral: true });
     } else if (wager < 0.01) {
-      return interaction.reply(`You must bet more than **$0**!`);
+      return interaction.reply({ content: `🚫 **You must bet more than $0.00.**`, ephemeral: true });
     }
 
     const point = generatePoint();

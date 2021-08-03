@@ -32,9 +32,9 @@ module.exports = {
     const transfereeBalance = await getBalance(transferee.id);
 
     if (transferAmount > balance) {
-      return interaction.reply(`insufficient balance! Your balance is **${formatMoney(balance)}**.`);
+      return interaction.reply({ content: `🚫 **Insufficient balance. Your balance is ${formatMoney(balance)}.**`, ephemeral: true });
     } else if (transferAmount < 0.01) {
-      return interaction.reply(`you must transfer more than $0!`);
+      return interaction.reply({ content: `🚫 **You must transfer more than $0.00.**`, ephemeral: true });
     }
 
     let transferEmbed = new MessageEmbed()

@@ -1,4 +1,4 @@
-const { MessageEmbed, Message } = require("discord.js");
+const { MessageEmbed } = require("discord.js");
 
 module.exports = {
   name: ["steal", "emoji"],
@@ -54,15 +54,13 @@ module.exports = {
             : interaction.reply("🚫 **Guild has reached maximum emoji capacity.**");
           break;
         case 50035:
-          isSlash
-            ? interaction.editReply("🚫 **Invalid image data.**")
-            : interaction.reply("🚫 **Invalid image data.**");
+          const message = error.message.replace("Invalid Form Body\nimage: ", "");
+          isSlash ? interaction.editReply(`🚫 **${message}**`) : interaction.reply(`🚫 **${message}**`);
           break;
         default:
           isSlash
             ? interaction.editReply("🚫 **An error occurred, please try again later.**")
             : interaction.reply("🚫 **An error occurred, please try again later.**");
-          console.error(error);
       }
     }
   },

@@ -11,8 +11,8 @@ const factorial = [
 ];
 
 const hiddenButton = new MessageButton().setLabel(" ").setStyle("SECONDARY").setCustomId("hiddenButton");
-const gemButton = new MessageButton().setEmoji("💎").setStyle("PRIMARY").setCustomId("gemButton"); //.setDisabled(true);
-const mineButton = new MessageButton().setEmoji("💣").setStyle("DANGER").setCustomId("mineButton"); //.setDisabled(true);
+const gemButton = new MessageButton().setEmoji("💎").setStyle("PRIMARY").setCustomId("gemButton");
+const mineButton = new MessageButton().setEmoji("💣").setStyle("DANGER").setCustomId("mineButton");
 const cashoutButton = new MessageButton().setLabel("Cash out").setStyle("SUCCESS").setCustomId("cashoutButton");
 
 module.exports = {
@@ -40,24 +40,24 @@ module.exports = {
         wager = formatWager(args[1]);
       } else {
         return interaction.reply({
-          content: `To play, use this command: \`${module.exports.usage}\``,
+          content: `⚠ **To play, use this command: \`${module.exports.usage}\`**`,
         });
       }
     }
 
     if (numMines < 1 || numMines > 24)
-      return interaction.reply({ content: "You must have between 1-24 mines!", ephemeral: true });
+      return interaction.reply({ content: "⚠ **You must choose between 1-24 mines.**", ephemeral: true });
 
     const balance = await getBalance(user.id);
     if (wager === "all") wager = balance;
 
     if (wager > balance) {
       return interaction.reply({
-        content: `Insufficient balance! Your balance is **${formatMoney(balance)}**.`,
+        content: `🚫 **Insufficient balance! Your balance is ${formatMoney(balance)}**.`,
         ephemeral: true,
       });
     } else if (wager < 0.01) {
-      return interaction.reply({ content: `You must bet more than $0!`, ephemeral: true });
+      return interaction.reply({ content: `🚫 **You must bet more than $0.00.**`, ephemeral: true });
     }
 
     // set up
