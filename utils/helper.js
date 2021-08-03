@@ -59,9 +59,9 @@ function sanitizeString(str) {
   return str.trim();
 }
 
-trunc = (number, decimals) => Math.trunc(number * Math.pow(10, decimals)) / Math.pow(10, decimals);
+const trunc = (number, decimals) => Math.trunc(number * Math.pow(10, decimals)) / Math.pow(10, decimals);
 
-randomRange = (min, max) => Math.random() * (max - min) + min;
+const randomRange = (min, max) => Math.random() * (max - min) + min;
 
 function timeToString(ms) {
   hours = Math.floor(ms / 60000 / 60);
