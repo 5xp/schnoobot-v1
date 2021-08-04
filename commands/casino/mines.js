@@ -179,7 +179,7 @@ module.exports = {
             .addField("**Balance**", numeral(balance + currentProfit).format("$0,0.00"), true)
             .addField("**Win %**", numeral(currentOdds).format("0.00%"), true);
 
-          awardPoints(user, nextProfit);
+          awardPoints(user, currentProfit);
         } else {
           minesEmbed = new MessageEmbed()
             .setTitle("💣 Mines")
