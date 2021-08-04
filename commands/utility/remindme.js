@@ -42,7 +42,7 @@ module.exports = {
       user = interaction.author;
     }
 
-    let reminderMessage = reason ? `**Reminder:** ${reason}` : "**Reminder!**";
+    const reminderMessage = reason ? `**Reminder:** ${reason}` : "**Reminder!**";
     const reminderEmbed = new MessageEmbed().setColor("#f0b111").setTitle("Reminder!");
     if (reason) reminderEmbed.setDescription(reminderMessage);
 

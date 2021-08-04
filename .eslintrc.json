@@ -24,7 +24,6 @@
 		"no-lonely-if": "warn",
 		"no-multi-spaces": "warn",
 		"no-multiple-empty-lines": ["warn", { "max": 2, "maxEOF": 1, "maxBOF": 0 }],
-		"no-shadow": ["warn", { "allow": ["err", "error", "resolve", "reject"] }],
 		"no-trailing-spaces": ["warn"],
 		"no-var": "warn",
 		"object-curly-spacing": ["warn", "always"],

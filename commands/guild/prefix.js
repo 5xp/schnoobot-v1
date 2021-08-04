@@ -6,7 +6,7 @@ module.exports = {
   required_perms: ["ADMINISTRATOR"],
   usage: `${process.env.PREFIX}prefix <new prefix>\n${process.env.PREFIX}prefix\n${process.env.PREFIX}prefix reset`,
   async execute(message, args, content) {
-    let newPrefix = content;
+    const newPrefix = content;
     if (args.length) {
       if (newPrefix == "reset") await setPrefix(message.guild.id, null);
       else await setPrefix(message.guild.id, newPrefix);

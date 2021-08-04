@@ -1,10 +1,5 @@
 const mongoose = require("mongoose");
 
-const string = {
-  type: String,
-  required: false,
-};
-
 const requiredString = {
   type: String,
   required: true,

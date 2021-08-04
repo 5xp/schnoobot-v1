@@ -16,7 +16,7 @@ module.exports = {
 
     let transferAmount = isSlash ? formatWager(interaction.options.getString("amount")) : formatWager(args[1]);
 
-    let transferee = isSlash ? interaction.options.getMember("user") : await findMember(args[0], interaction);
+    const transferee = isSlash ? interaction.options.getMember("user") : await findMember(args[0], interaction);
 
     if (!transferee) {
       interaction.reply(`🚫 **To transfer, use this command: \`${module.exports.usage}\`**`);
@@ -32,12 +32,15 @@ module.exports = {
     const transfereeBalance = await getBalance(transferee.id);
 
     if (transferAmount > balance) {
-      return interaction.reply({ content: `🚫 **Insufficient balance. Your balance is ${formatMoney(balance)}.**`, ephemeral: true });
+      return interaction.reply({
+        content: `🚫 **Insufficient balance. Your balance is ${formatMoney(balance)}.**`,
+        ephemeral: true,
+      });
     } else if (transferAmount < 0.01) {
       return interaction.reply({ content: `🚫 **You must transfer more than $0.00.**`, ephemeral: true });
     }
 
-    let transferEmbed = new MessageEmbed()
+    const transferEmbed = new MessageEmbed()
       .setColor("#00e394")
       .setTitle(`${interaction.member.user.username}'s transfer to ${transferee.user.username}`)
       .addField("**Transfer**", formatMoney(transferAmount), true)

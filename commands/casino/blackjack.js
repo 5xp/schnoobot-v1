@@ -6,8 +6,9 @@ module.exports = {
   description: "beat dealer's hand without going over 21; dealer stands on all 17s",
   usage: `${process.env.PREFIX}blackjack <bet>`,
   async execute(message, args) {
+    let wager;
     if (args[0]) {
-      var wager = formatWager(args[0]);
+      wager = formatWager(args[0]);
     } else {
       return message.reply(`⚠ **To play, use this command: \`${module.exports.usage}\`**`);
     }
@@ -28,13 +29,13 @@ module.exports = {
     awardMoney(message.author.id, -wager);
 
     // create shuffled deck
-    var deck = shuffle(createDeck()),
+    const deck = shuffle(createDeck()),
       yourHand = { cards: [], score: 0, emoji_string: "" },
       dealerHand = { cards: [], score: 0, emoji_string: "" },
       hands = [dealerHand, yourHand];
 
     // deal cards to player and dealer
-    for (var i = 0; i < 2; i++) {
+    for (let i = 0; i < 2; i++) {
       drawCard(yourHand);
       drawCard(dealerHand);
     }
@@ -42,19 +43,19 @@ module.exports = {
     // hide one of dealer's cards
     dealerHand.cards[1].hidden = true;
 
-    var bjEmbed = new MessageEmbed();
+    let bjEmbed = new MessageEmbed();
     update();
 
     // user input
-    let hitButton = new MessageButton().setLabel("Hit").setEmoji(emojis[HIT]).setStyle("SUCCESS").setCustomId("hit");
+    const hitButton = new MessageButton().setLabel("Hit").setEmoji(emojis[HIT]).setStyle("SUCCESS").setCustomId("hit");
 
-    let standButton = new MessageButton()
+    const standButton = new MessageButton()
       .setLabel("Stand")
       .setEmoji(emojis[STAND])
       .setStyle("DANGER")
       .setCustomId("stand");
 
-    let doubleButton = new MessageButton()
+    const doubleButton = new MessageButton()
       .setLabel("Double Down")
       .setEmoji(emojis[DOUBLE])
       .setStyle("PRIMARY")
@@ -62,13 +63,13 @@ module.exports = {
 
     if (wager * 2 > balance) doubleButton.setDisabled(true);
 
-    let bjRow = new MessageActionRow().addComponents([hitButton, standButton, doubleButton]);
+    const bjRow = new MessageActionRow().addComponents([hitButton, standButton, doubleButton]);
 
     const msg = await message.channel.send({ components: [bjRow], embeds: [bjEmbed] });
 
     const filter = button => button.user.id === message.author.id;
     const collector = msg.createMessageComponentCollector({ filter, time: 45000 });
-    var finish = false;
+    let finish = false;
 
     collector.on("collect", button => {
       if (button.customId === "hit") {
@@ -109,12 +110,12 @@ module.exports = {
     }
 
     function update() {
-      for (var i = 0; i < hands.length; i++) {
+      for (let i = 0; i < hands.length; i++) {
         hands[i].score = 0;
         hands[i].emoji_string = "";
         hands[i].string = "";
 
-        for (var j = 0; j < hands[i].cards.length; j++) {
+        for (let j = 0; j < hands[i].cards.length; j++) {
           if (hands[i].cards[j].value === "A") hands[i].cards[j].weight = 1;
 
           if (!hands[i].cards[j].hidden) {
@@ -129,7 +130,7 @@ module.exports = {
           hands[i].bust = true;
           collector.stop("bust");
         } else {
-          for (var j = 0; j < hands[i].cards.length; j++) {
+          for (let j = 0; j < hands[i].cards.length; j++) {
             if (!hands[i].cards[j].hidden && hands[i].cards[j].value === "A" && hands[i].score + 10 <= 21) {
               hands[i].cards[j].weight = 11;
               hands[i].score += 10;
@@ -143,18 +144,20 @@ module.exports = {
         }
       }
 
+      let end;
+
       if (
         (yourHand.score > dealerHand.score && !yourHand.bust && dealerHand.score >= 17) ||
         dealerHand.bust ||
         yourHand.blackjack
       ) {
-        var end = 0;
+        end = 0;
         finish = true;
       } else if (yourHand.score == dealerHand.score && dealerHand.score >= 17) {
-        var end = 1;
+        end = 1;
         finish = true;
       } else if (dealerHand.score >= 17 || yourHand.bust) {
-        var end = 2;
+        end = 2;
         finish = true;
       }
 
@@ -201,37 +204,38 @@ const HIT = 52,
   BACK = 55;
 
 function createDeck() {
-  var deck = [];
-  for (var i = 0; i < suits.length; i++) {
-    for (var j = 0; j < values.length; j++) {
+  const deck = [];
+  for (let i = 0; i < suits.length; i++) {
+    for (let j = 0; j < values.length; j++) {
+      let weight;
       switch (values[j]) {
         case "J":
-          var weight = 10;
+          weight = 10;
           break;
         case "Q":
-          var weight = 10;
+          weight = 10;
           break;
         case "K":
-          var weight = 10;
+          weight = 10;
           break;
         case "A":
-          var weight = 1;
+          weight = 1;
           break;
         default:
-          var weight = +values[j];
+          weight = +values[j];
       }
-      var card = { suit: suits[i], value: values[j], weight: weight, hidden: false };
+      const card = { suit: suits[i], value: values[j], weight: weight, hidden: false };
       deck.push(card);
     }
   }
-  for (var i = 0; i < deck.length; i++) {
+  for (let i = 0; i < deck.length; i++) {
     deck[i]["emoji"] = emojis[i];
   }
   return deck;
 }
 
 function shuffle(deck) {
-  for (var i = deck.length - 1; i > 0; i--) {
+  for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }

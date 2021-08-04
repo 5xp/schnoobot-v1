@@ -80,6 +80,7 @@ module.exports = {
 
       const dailyEmbed = new MessageEmbed();
 
+      let fields;
       if (awarded) {
         dailyEmbed.setColor("#fc03d3");
 

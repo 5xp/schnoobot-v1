@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { setBlacklist, getBlacklist } = require("@utils/guildsettings");
 const { findChannel } = require("@utils/helper");
-const { MessageEmbed, Formatters } = require("discord.js");
+const { MessageEmbed } = require("discord.js");
 
 module.exports = {
   name: ["blacklist", "bl"],
@@ -78,11 +78,13 @@ module.exports = {
           .setColor("DARK_RED")
           .addFields(fields);
 
-        if (completelyBlacklisted.length)
+        if (completelyBlacklisted.length) {
           listEmbed.addField("Blacklisted from guild", completelyBlacklisted.join(", "));
+        }
 
-        if (!completelyBlacklisted.length && !fields.length)
+        if (!completelyBlacklisted.length && !fields.length) {
           return interaction.reply({ content: "⚠ **This server's blacklist is empty.**", ephemeral: true });
+        }
 
         interaction.reply({ embeds: [listEmbed], ephemeral: true });
       } else {
@@ -98,14 +100,16 @@ module.exports = {
 
           channel = options.getChannel("channel");
 
-          if (channel?.isText() || channel === null)
+          if (channel?.isText() || channel === null) {
             res = await setBlacklist(guild.id, { input, channel: channel?.id ?? null });
-          else throw new Error(`🚫 **<#${channel.id}> is not a valid text channel.**`);
+          } else {
+            throw new Error(`🚫 **<#${channel.id}> is not a valid text channel.**`);
+          }
         } else {
           input = args[0];
 
-          const command = client.commands.findKey(command => command.name.includes(input));
-          const category = client.commands.find(command => command.category === input);
+          const command = client.commands.findKey(cmd => cmd.name.includes(input));
+          const category = client.commands.find(cmd => cmd.category === input);
 
           input = category ?? command;
 
@@ -115,9 +119,11 @@ module.exports = {
 
           channel = findChannel(args?.[1], interaction) ?? null;
 
-          if (channel?.isText() || channel === null)
+          if (channel?.isText() || channel === null) {
             res = await setBlacklist(guild.id, { input, channel: channel?.id ?? null });
-          else throw new Error(`🚫 **<#${channel.id}> is not a valid text channel.**`);
+          } else {
+            throw new Error(`🚫 **<#${channel.id}> is not a valid text channel.**`);
+          }
         }
 
         if (res) {

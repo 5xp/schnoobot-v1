@@ -14,7 +14,7 @@ module.exports = {
   ],
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
-    var input, wager, user;
+    let input, wager, user;
 
     if (isSlash) {
       input = toNumber(interaction.options.getString("target"));
@@ -30,13 +30,18 @@ module.exports = {
       }
     }
 
-    if (input <= 1) return interaction.reply({ content: `⚠ **Your target payout must be greater than 1.00x.**`, ephemeral: true });
+    if (input <= 1) {
+      return interaction.reply({ content: `⚠ **Your target payout must be greater than 1.00x.**`, ephemeral: true });
+    }
 
     const balance = await getBalance(user.id);
     if (wager === "all") wager = balance;
 
     if (wager > balance) {
-      return interaction.reply({ content: `🚫 **Insufficient balance. Your balance is ${formatMoney(balance)}.**`, ephemeral: true });
+      return interaction.reply({
+        content: `🚫 **Insufficient balance. Your balance is ${formatMoney(balance)}.**`,
+        ephemeral: true,
+      });
     } else if (wager < 0.01) {
       return interaction.reply({ content: `🚫 **You must bet more than $0.00.**`, ephemeral: true });
     }

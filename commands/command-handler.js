@@ -18,7 +18,7 @@ module.exports = client => {
         readFiles(path.join(dir, file), collection);
       } else if (file !== handlerFile && file.endsWith(".js")) {
         const command = require(path.join(__dirname, dir, file));
-        let { name, required_perms = [] } = command;
+        const { name, required_perms = [] } = command;
 
         const category = path.basename(path.dirname(path.join(__dirname, dir, file)));
         command.category = category;
@@ -40,7 +40,7 @@ module.exports = client => {
 
     if (content.startsWith(prefix)) {
       for (const command of client.commands.values()) {
-        let { name, disabled = false, required_perms = [], execute } = command;
+        const { name, disabled = false, required_perms = [], execute } = command;
 
         for (const alias of name) {
           if (content.toLowerCase().split(" ")[0] === `${prefix}${alias.toLowerCase()}`) {
@@ -55,8 +55,9 @@ module.exports = client => {
               return message.reply("⚠ **This command is disabled.**");
             }
 
-            if (await checkBlacklisted(message, command))
+            if (await checkBlacklisted(message, command)) {
               return message.reply("⚠ **This command cannot be used in this channel.**");
+            }
 
             const args = content.split(/[ ]+/);
             args.shift();
@@ -78,7 +79,7 @@ module.exports = client => {
   client.on("interactionCreate", async interaction => {
     if (interaction.isCommand()) {
       const command = client.commands.find(cmd => cmd.name.includes(interaction.commandName));
-      let { name, disabled = false, required_perms = [], execute } = command;
+      const { name, disabled = false, required_perms = [], execute } = command;
 
       const missing_perms = required_perms.filter(permission => !interaction.member.permissions.has(permission));
       if (missing_perms.length) {
@@ -90,8 +91,9 @@ module.exports = client => {
 
       if (disabled) return interaction.reply({ content: "⚠ **This command is disabled.**", ephemeral: true });
 
-      if (await checkBlacklisted(interaction, command))
+      if (await checkBlacklisted(interaction, command)) {
         return interaction.reply({ content: "⚠ **This command cannot be used in this channel.**", ephemeral: true });
+      }
 
       const currentTime = new Date().toTimeString().split(" ")[0];
       const options = interaction.options._hoistedOptions.map(option => `${option.name}: ${option.value}`);

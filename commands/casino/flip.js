@@ -6,9 +6,10 @@ module.exports = {
   description: "flip a coin",
   usage: `${process.env.PREFIX}flip <heads/tails> <bet>`,
   async execute(message, args) {
+    let input, wager;
     if (args[0] && args[1]) {
-      var input = args[0].toLowerCase();
-      var wager = formatWager(args[1]);
+      input = args[0].toLowerCase();
+      wager = formatWager(args[1]);
     } else {
       return message.reply(`⚠ **To play, use this command: \`${module.exports.usage}\`**`);
     }
@@ -48,14 +49,15 @@ module.exports = {
 
     const flip = Math.round(Math.random());
 
+    let end;
     if (input == flip) {
-      var end = "**You won!** ";
+      end = "**You won!** ";
       flipEmbed.setColor("#2bff00");
       flipEmbed.addField("**Net Gain**", formatMoney(wager), true);
       flipEmbed.addField("**Balance**", formatMoney(balance + wager), true);
       awardMoney(message.author.id, wager);
     } else {
-      var end = "**You lost!** ";
+      end = "**You lost!** ";
       flipEmbed.setColor("#ff0000");
       flipEmbed.addField("**Net Gain**", formatMoney(-wager), true);
       flipEmbed.addField("**Balance**", formatMoney(balance - wager), true);

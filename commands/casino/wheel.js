@@ -1,6 +1,5 @@
 const { MessageEmbed } = require("discord.js");
 const { awardMoney, getBalance, formatMoney, formatWager } = require("@utils/economy");
-const numeral = require("numeral");
 const validTypes = ["red", "black", "even", "odd", "low", "high", "number"];
 const longDigits = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
 
@@ -9,9 +8,10 @@ module.exports = {
   description: "roulette wheel",
   usage: `${process.env.PREFIX}wheel <bet type> <wager>\nbet types: red, black, even, odd, high, low, green, <number>`,
   async execute(message, args) {
+    let input, wager;
     if (args[0] && args[1]) {
-      var input = args[0].toLowerCase();
-      var wager = formatWager(args[1]);
+      input = args[0].toLowerCase();
+      wager = formatWager(args[1]);
     } else {
       return message.reply(`⚠ To play, use this command: \`${module.exports.usage}\``);
     }

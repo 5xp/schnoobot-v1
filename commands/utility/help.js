@@ -1,7 +1,4 @@
-const { MessageEmbed, MessageButton } = require("discord.js");
-const fs = require("fs");
-const path = require("path");
-const handlerFile = "command-handler.js";
+const { MessageEmbed, MessageButton, Collection } = require("discord.js");
 
 module.exports = {
   name: ["help", "h"],
@@ -13,43 +10,35 @@ module.exports = {
   ],
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
-    const isOwner = isSlash
-      ? interaction.user.id === interaction.client.application.owner.id
-      : interaction.author.id === interaction.client.application.owner.id;
-    let { client } = interaction;
+    const { client } = interaction;
+    const user = isSlash ? interaction.user : interaction.author;
     let currentPage = 0;
-    let cmdlist = {};
 
-    const readCommands = dir => {
-      const files = fs.readdirSync(path.join(__dirname, dir));
-      for (const file of files) {
-        const stat = fs.lstatSync(path.join(__dirname, dir, file));
-        if (stat.isDirectory()) {
-          readCommands(path.join(dir, file));
-        } else if (file !== handlerFile) {
-          let category = path.basename(path.dirname(path.join(__dirname, dir, file)));
-          const command = require(path.join(__dirname, dir, file));
-          let { name, description = "", disabled = false, hidden = false } = command;
+    const categories = [...new Set(client.commands.map(command => command.category))];
 
-          if (!disabled && !hidden) {
-            if (category === "owner" && !isOwner) return; // only show owner page to owner
-            if (!(category in cmdlist)) {
-              cmdlist[category] = [];
-            }
-            cmdlist[category].push(`**${name[0]}**: ${description}`);
-          }
-        }
-      }
-    };
+    if (user.id !== client.application.owner.id) {
+      categories.delete("owner");
+    }
 
-    readCommands("../");
+    const commandsPerCategory = new Collection();
 
-    if (isSlash ? !interaction.options.get("command")?.value : !args[0]) {
+    for (const category of categories) {
+      commandsPerCategory.set(
+        category,
+        client.commands.filter(command => command.category === category)
+      );
+    }
+
+    if (isSlash ? !interaction.options.getString("command") : !args[0]) {
       await interaction.defer?.();
 
-      const leftButton = new MessageButton().setEmoji("◀").setStyle("PRIMARY").setCustomId("left");
-      const rightButton = new MessageButton().setEmoji("▶").setStyle("PRIMARY").setCustomId("right");
       const msgObject = () => {
+        const leftButton = new MessageButton().setEmoji("◀").setStyle("PRIMARY").setCustomId("left");
+        const rightButton = new MessageButton().setEmoji("▶").setStyle("PRIMARY").setCustomId("right");
+
+        if (currentPage === categories.length - 1) rightButton.setDisabled(true);
+        if (currentPage === 0) leftButton.setDisabled(true);
+
         return {
           components: [{ type: 1, components: [leftButton, rightButton] }],
           embeds: [getGenericEmbed(currentPage)],
@@ -58,37 +47,36 @@ module.exports = {
 
       const msg = isSlash ? await interaction.editReply(msgObject()) : await interaction.reply(msgObject());
 
-      const filter = button => button.user.id === interaction.author.id;
+      const filter = button => button.user.id === user.id;
 
       const collector = msg.createMessageComponentCollector({ filter, time: 30000 });
 
       collector.on("collect", button => {
         if (button.customId === "right") {
           currentPage++;
-          currentPage = Math.min(currentPage, Object.keys(cmdlist).length - 1);
           button.update(msgObject());
         } else {
           currentPage--;
-          currentPage = Math.max(currentPage, 0);
           button.update(msgObject());
         }
       });
     } else {
-      let desiredCmd = isSlash ? interaction.options.get("command").value.toLowerCase() : args[0].toLowerCase();
-      let embed = getDetailedEmbed(desiredCmd);
+      const desiredCmd = isSlash ? interaction.options.getString("command").toLowerCase() : args[0].toLowerCase();
+      const embed = getDetailedEmbed(desiredCmd);
       if (embed) interaction.reply({ embeds: [embed] });
       else interaction.reply(`🚫 **\`${desiredCmd}\` is not a valid command.**`);
     }
 
     function getGenericEmbed(page) {
-      var helpEmbed = new MessageEmbed();
-      category = Object.keys(cmdlist)[page];
-      arr = cmdlist[category];
-      str = arr.join("\n");
+      const helpEmbed = new MessageEmbed();
+      const category = categories[page];
+      const commands = commandsPerCategory.get(category);
+
       return helpEmbed
         .setColor("#f03e1f")
-        .addFields({ name: `Showing ${category.toLowerCase()} commands`, value: str })
-        .setFooter(`Page ${page + 1}/${Object.keys(cmdlist).length}`);
+        .setAuthor(`${category} commands`)
+        .setDescription(`${commands.map(command => `**${command.name[0]}:** ${command.description}`).join("\n")}`)
+        .setFooter(`Page ${page + 1}/${categories.length}`);
     }
 
     function getDetailedEmbed(cmd) {
@@ -96,17 +84,16 @@ module.exports = {
 
       if (!cmd) return;
 
-      const helpEmbed = new MessageEmbed();
-
-      helpEmbed
+      const helpEmbed = new MessageEmbed()
         .setColor("#f03e1f")
-        .setTitle(`Showing details for ${process.env.PREFIX}${cmd.name[0] || cmd.name}`)
+        .setTitle(`Details for ${process.env.PREFIX}${cmd.name[0] || cmd.name}`)
         .addField("**Description**", cmd.description);
 
       if (cmd.usage) helpEmbed.addField("**Usage**", `\`${cmd.usage}\``, true);
       if (cmd.name.length > 1) helpEmbed.addField("**Aliases**", cmd.name.join(", "));
-      if (cmd.required_perms)
-        helpEmbed.addField("**Permissions required**", cmd.required_perms.map(cmd => `\`${cmd}\``).join(", "));
+      if (cmd.required_perms) {
+        helpEmbed.addField("**Permissions required**", cmd.required_perms.map(command => `\`${command}\``).join(", "));
+      }
 
       return helpEmbed;
     }

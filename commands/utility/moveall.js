@@ -26,17 +26,15 @@ module.exports = {
       origin = interaction.options.getChannel("from") ?? interaction.member.voice.channel;
       destination = interaction.options.getChannel("destination");
       await moveToChannel(origin, destination);
+    } else if (!args.length) {
+      interaction.reply(`⚠ **To use this command: \`${module.exports.usage}\`**`);
     } else {
-      if (!args.length) {
-        interaction.reply(`⚠ **To use this command: \`${module.exports.usage}\`**`);
-      } else {
-        origin = args.length > 1 ? findVoice(args[0], interaction) : interaction.member.voice.channel;
-        destination = args.length > 1 ? findVoice(args[1], interaction) : findVoice(args[0], interaction);
-        await moveToChannel(origin, destination);
-      }
+      origin = args.length > 1 ? findVoice(args[0], interaction) : interaction.member.voice.channel;
+      destination = args.length > 1 ? findVoice(args[1], interaction) : findVoice(args[0], interaction);
+      await moveToChannel(origin, destination);
     }
 
-    async function moveToChannel(origin, destination) {
+    async function moveToChannel() {
       try {
         checkValid(origin, destination);
 
@@ -46,21 +44,22 @@ module.exports = {
           })
         );
 
-        if (isSlash)
+        if (isSlash) {
           interaction.editReply(
             `✅ **Moved ${origin.members.size} members from <#${origin.id}> to <#${destination.id}>!**`
           );
-        else
+        } else {
           interaction.reply(
             `✅ **Moved ${origin.members.size} members from <#${origin.id}> to <#${destination.id}>!**`
           );
+        }
       } catch (error) {
         if (isSlash) interaction.editReply(error.message);
         else interaction.reply(error.message);
         return;
       }
 
-      function checkValid(origin, destination) {
+      function checkValid() {
         if (!interaction.member.voice.channel) {
           throw new Error("🚫 **You must be in a voice channel.**");
         } else if (!origin || !destination || destination.type !== "GUILD_VOICE") {

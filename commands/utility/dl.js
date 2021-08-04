@@ -1,9 +1,9 @@
-const { MessageAttachment } = require("discord.js");
 const youtubedl = require("youtube-dl-exec");
+const ffmpeg = require("ffmpeg");
 const fs = require("fs");
+const { MessageAttachment, Formatters } = require("discord.js");
 const { getVideoDurationInSeconds } = require("get-video-duration");
 const { getAudioDurationInSeconds } = require("get-audio-duration");
-const ffmpeg = require("ffmpeg");
 const { downloadFile } = require("@utils/helper");
 
 const format1 = "bestvideo[ext=mp4][filesize<8M]+bestaudio[ext=m4a]";
@@ -21,7 +21,7 @@ module.exports = {
   slash: true,
   async execute(interaction, args, silent) {
     if (silent !== true) silent = false;
-    let url, reaction;
+    let url, reaction, reply;
 
     const dir = `${process.cwd()}/temp`;
     const flags = {
@@ -64,9 +64,11 @@ module.exports = {
       const output = await youtubedl(url, flags);
 
       console.log(output);
-      var filename = fs.readdirSync(dir).filter(file => file.startsWith(interaction.id))[0];
-      var ext = filename.slice(interaction.id.length + 1);
+      const filename = fs.readdirSync(dir).filter(file => file.startsWith(interaction.id))[0];
+      const ext = filename.slice(interaction.id.length + 1);
+
       let path = `${dir}/${filename}`;
+
       const originalpath = path;
 
       const stats = fs.statSync(path);
@@ -88,31 +90,35 @@ module.exports = {
       let failedToCompress = false;
       if (megabytes > maxFilesize) {
         console.log(`Filesize is greater than ${maxFilesize} megabytes! (${megabytes.toFixed(2)} MB)`.red);
-        if (!silent) {
-          if (isSlash) {
-            await interaction.editReply({
-              content: `<a:loading:861916931367108608> Compressing file... (${megabytes.toFixed(2)} MB)`,
-            });
-          } else {
-            var msg = await interaction.reply({
-              content: `Compressing file... (${megabytes.toFixed(2)} MB)`,
-              allowedMentions: { repliedUser: false },
-            });
-          }
-        } else interaction.react("⚠️");
+
+        if (silent) {
+          interaction.react("⚠");
+        } else if (isSlash) {
+          await interaction.editReply({
+            content: `<a:loading:861916931367108608> Compressing file... (${megabytes.toFixed(2)} MB)`,
+          });
+        } else {
+          reply = await interaction.reply({
+            content: `Compressing file... (${megabytes.toFixed(2)} MB)`,
+            allowedMentions: { repliedUser: false },
+          });
+        }
 
         try {
           await compress(`${dir}/${interaction.id}`, ext, maxFilesize);
           path = `${dir}/${interaction.id}_new.${ext}`;
         } catch (error) {
           failedToCompress = true;
-          if (isSlash) {
+
+          if (silent) {
+            interaction.react("🚫");
+          } else if (isSlash) {
             await interaction.editReply({ content: "🚫 **Download failed!**", ephemeral: false });
-            await interaction.followUp({ content: `\`\`\`${error.message}\`\`\``, ephemeral: true });
+            await interaction.followUp({ content: Formatters.codeBlock(error.message), ephemeral: true });
           } else {
-            if (silent) interaction.react("🚫");
-            else interaction.reply(error.message);
+            interaction.reply(error.message);
           }
+
           fs.unlink(path, error => {
             if (error) throw error;
           });
@@ -126,22 +132,22 @@ module.exports = {
       if (isSlash) {
         await interaction.editReply({ content: null, files: [attachment] }).catch(async error => {
           await interaction.editReply({ content: "🚫 **Download failed!**", ephemeral: false });
-          await interaction.followUp({ content: `\`\`\`${error.message}\`\`\``, ephemeral: true });
+          await interaction.followUp({ content: Formatters.codeBlock(error.message), ephemeral: true });
         });
       } else {
         await interaction.reply({ files: [attachment], allowedMentions: { repliedUser: false } }).catch(error => {
-          if (!silent) interaction.reply(error.message);
-          else interaction.react("🚫");
+          silent ? interaction.react("🚫") : interaction.reply(error.message);
         });
       }
 
       fs.unlink(path, error => {
         if (error) throw error;
       });
-      if (path !== originalpath)
+      if (path !== originalpath) {
         fs.unlink(originalpath, error => {
           if (error) throw error;
         });
+      }
 
       if (reaction) {
         reaction = await reaction;
@@ -151,15 +157,17 @@ module.exports = {
       console.log(err);
       const err_str = err.stderr.match(/^ERROR.*$/gm);
 
-      if (silent) return interaction.react("🚫");
-      else if (isSlash) {
+      if (silent) {
+        return interaction.react("🚫");
+      } else if (isSlash) {
         await interaction.editReply({ content: "🚫 **Download failed!**", ephemeral: false });
-        await interaction.followUp({ content: `\`\`\`${err_str.join("\n")}\`\`\``, ephemeral: true });
+        await interaction.followUp({ content: Formatters.codeBlock(err_str.join("\n")), ephemeral: true });
         return;
+      } else {
+        return interaction.reply(Formatters.codeBlock(err_str.join("\n")));
       }
-      return interaction.reply(`\`\`\`${err_str.join("\n")}\`\`\``);
     } finally {
-      if (msg) msg.delete();
+      if (reply) reply.delete();
 
       if (reaction) {
         reaction = await reaction;
@@ -185,8 +193,8 @@ async function compress(path, ext, target) {
 
   if (bitrate < 0) throw new Error("File cannot be compressed");
 
-  var process = new ffmpeg(`${path}.${ext}`);
-  video = await process;
+  const process = new ffmpeg(`${path}.${ext}`);
+  const video = await process;
   video.addCommand("-b:v", bitrate + "k");
   return video.save(`${path}_new.${ext}`);
 }

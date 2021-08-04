@@ -8,8 +8,8 @@ module.exports = {
   slash: true,
   options: [{ name: "user", type: "USER", description: "get the avatar of this user", required: false }],
   async execute(interaction, args, content) {
-    let desiredUser,
-      avatarFormat = { format: "png", dynamic: true, size: 2048 };
+    let desiredUser;
+    const avatarFormat = { format: "png", dynamic: true, size: 2048 };
     const isSlash = interaction?.type === "APPLICATION_COMMAND";
 
     if (isSlash) {
