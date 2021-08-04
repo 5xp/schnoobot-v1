@@ -151,14 +151,13 @@ module.exports = {
       } else {
         cellsRevealed++;
         const res = calculateMultiplier(numMines, cellsRevealed, wager);
+        const { currentProfit, currentMult, currentOdds, nextMult, nextProfit, winOdds } = res;
 
         // revealed all non-mines
         if (25 - numMines == cellsRevealed) {
           btnCollector.stop();
           cashoutMessage.delete();
           revealGrid(grid);
-
-          const { currentProfit, currentMult, currentOdds, nextProfit } = res;
 
           minesEmbed = new MessageEmbed()
             .setDescription("**You won!**")
@@ -168,7 +167,15 @@ module.exports = {
             .addField("**Balance**", formatMoney(balance + currentProfit), true)
             .addField("**Win %**", numeral(currentOdds).format("0.00%"), true);
 
-          awardMoney(user.id, nextProfit);
+          awardMoney(user.id, currentProfit);
+        } else {
+          minesEmbed = new MessageEmbed()
+            .setTitle("💣 Mines")
+            .setColor("#ffffff")
+            .addField("**Mines**", numMines.toString(), true)
+            .addField("**Total Profit**", `${formatMoney(currentProfit)} (${currentMult}x)`, true)
+            .addField("**Profit on Next Tile**", `${formatMoney(nextProfit)} (${nextMult.toFixed(2)}x)`, true)
+            .addField("**Win % of Next Tile**", `${numeral(winOdds).format("0.00%")}`, true);
         }
       }
 
@@ -176,38 +183,42 @@ module.exports = {
       button.update({ components: buttonRows, embeds: [minesEmbed] });
     });
 
-    cashoutCollector.then(button => {
-      const res = calculateMultiplier(numMines, cellsRevealed, wager);
-      btnCollector.stop();
-      cashoutMessage.delete();
-      revealGrid(grid);
+    cashoutCollector
+      .then(button => {
+        const res = calculateMultiplier(numMines, cellsRevealed, wager);
+        btnCollector.stop();
+        cashoutMessage.delete();
+        revealGrid(grid);
 
-      if (cellsRevealed > 0) {
-        const { currentProfit, currentMult, currentOdds } = res;
-        minesEmbed = new MessageEmbed()
-          .setTitle("💣 Mines")
-          .setColor("#2bff00")
-          .addField("**Profit**", `${formatMoney(currentProfit)} (${currentMult.toFixed(2)}x)`, true)
-          .addField("**Balance**", formatMoney(balance + currentProfit), true)
-          .addField("**Win %**", numeral(currentOdds).format("0.00%"), true);
+        if (cellsRevealed > 0) {
+          const { currentProfit, currentMult, currentOdds } = res;
+          minesEmbed = new MessageEmbed()
+            .setTitle("💣 Mines")
+            .setColor("#2bff00")
+            .addField("**Profit**", `${formatMoney(currentProfit)} (${currentMult.toFixed(2)}x)`, true)
+            .addField("**Balance**", formatMoney(balance + currentProfit), true)
+            .addField("**Win %**", numeral(currentOdds).format("0.00%"), true);
 
-        awardMoney(user.id, currentProfit);
+          awardMoney(user.id, currentProfit);
 
-        buttonRows = createButtonGrid(rows, columns, grid);
-        button.deferUpdate();
-        msg.edit({ components: buttonRows, embeds: [minesEmbed] });
-      } else {
-        minesEmbed = new MessageEmbed()
-          .setTitle("💣 Mines")
-          .setColor("#ffffff")
-          .addField("**Profit**", `${formatMoney(0)} (1.00x)`, true)
-          .addField("**Balance**", formatMoney(balance), true);
+          buttonRows = createButtonGrid(rows, columns, grid);
+          button.deferUpdate();
+          msg.edit({ components: buttonRows, embeds: [minesEmbed] });
+        } else {
+          minesEmbed = new MessageEmbed()
+            .setTitle("💣 Mines")
+            .setColor("#ffffff")
+            .addField("**Profit**", `${formatMoney(0)} (1.00x)`, true)
+            .addField("**Balance**", formatMoney(balance), true);
 
-        buttonRows = createButtonGrid(rows, columns, grid);
-        button.deferUpdate();
-        msg.edit({ components: buttonRows, embeds: [minesEmbed] });
-      }
-    });
+          buttonRows = createButtonGrid(rows, columns, grid);
+          button.deferUpdate();
+          msg.edit({ components: buttonRows, embeds: [minesEmbed] });
+        }
+      })
+      .catch(() => {
+        // ignore message delete error
+      });
   },
 };
 
