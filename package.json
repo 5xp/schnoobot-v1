@@ -4,7 +4,9 @@
   "description": "Discord bot",
   "main": "schnoobot.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node .",
+    "lint": "eslint ."
   },
   "author": "chris#4000",
   "license": "ISC",
@@ -13,6 +15,7 @@
     "colors": "^1.4.0",
     "discord.js": "^13.0.0-dev.4886ae2.1627300977",
     "dotenv": "^8.2.0",
+    "eslint": "^7.32.0",
     "ffmpeg": "0.0.4",
     "get-audio-duration": "^2.0.3",
     "get-video-duration": "^3.0.2",
