@@ -46,7 +46,7 @@ module.exports = {
       options: [{ name: "lobby", type: "STRING", description: "the code of the lobby to join", required: true }],
     },
   ],
-  async execute(interaction, args) {
+  async execute(interaction) {
     const isSlash = interaction.isCommand?.();
 
     const joinButton = new MessageButton().setStyle("PRIMARY").setLabel("Join").setCustomId("join");
@@ -80,7 +80,7 @@ module.exports = {
 
       // in case of a collision
       while (lobbies.has(lobbies)) {
-        lobbies = generateCode();
+        lobbyCode = generateCode();
       }
 
       const lobbyEmbed = new MessageEmbed()
@@ -91,16 +91,17 @@ module.exports = {
         .setDescription(`Stacking: ${bStack ? "on" : "off"} | Draw: ${bDrawOne ? "once" : "multiple"}`);
 
       let lobbyMsg;
-      if (isSlash)
+      if (isSlash) {
         lobbyMsg = await interaction.editReply({
           embeds: [lobbyEmbed],
           components: [{ type: 1, components: [joinButton] }],
         });
-      else
+      } else {
         lobbyMsg = await interaction.reply({
           embeds: [lobbyEmbed],
           components: [{ type: 1, components: [joinButton] }],
         });
+      }
 
       const filter = interaction => interaction.message.id === lobbyMsg.id;
       const buttonCollector = lobbyMsg.createMessageComponentCollector({ filter });
@@ -153,7 +154,7 @@ module.exports = {
         // wait for start or leave button press
         const dmI = await dmMsg.awaitMessageComponent({
           filter: i => (!collector.ended && players.length > 1) || i.customId === "leave",
-        }); //ignore if game already started
+        });
 
         if (dmI.customId === "leave") {
           players.splice(players.indexOf(player));
@@ -205,8 +206,9 @@ async function startGame(players, options, callback) {
     winner;
 
   let deck = shuffleDeck(createUnoDeck()),
-    discarded = [],
-    history = [],
+    discarded = [];
+
+  const history = [],
     // increments or decrements if reversed
     n = () => (isReverse ? -1 : 1),
     // wrap around if turn exceeds number of players
@@ -276,6 +278,11 @@ async function startGame(players, options, callback) {
       // handles wildcard color picking
       topCard().color = i.customId.substr(4);
       history.push(`${player.name} changed the color to ${topCard().color}`);
+    } else if (i.customId.startsWith("m")) {
+      i.customId === "mLeft" ? player.page-- : player.page++;
+      await i.update({ components: createActionRows(player), content: handEmojis(player.hand) });
+      startTurn(player);
+      return;
     } else {
       const card = player.hand[i.customId];
       player.hand.splice(i.customId, 1);
@@ -286,7 +293,9 @@ async function startGame(players, options, callback) {
       if (card.isWild()) {
         history.push(`${player.name} played ${card.face}`);
         return;
-      } else history.push(`${player.name} played ${card.label()}`);
+      } else {
+        history.push(`${player.name} played ${card.label()}`);
+      }
     }
 
     if (player.hand.length === 0) {
@@ -396,9 +405,13 @@ async function startGame(players, options, callback) {
 
     embed.setImage(getEmojiLink(getEmojiId(topCard(), true)));
 
-    for (var i = 0; i < players.length; i++) {
-      if (players[i].hand.length === 0) embed.addField(fields[i], "**🏆Winner**", true);
-      else embed.addField(fields[i], handEmojis(players[i].hand, true), true);
+    for (let i = 0; i < players.length; i++) {
+      const { hand } = players[i];
+      if (hand.length === 0) {
+        embed.addField(fields[i], "**🏆Winner**", true);
+      } else {
+        embed.addField(`${fields[i]} - ${hand.length} card${hand.length > 1 ? "s" : ""}`, handEmojis(hand, true), true);
+      }
     }
 
     if (isGameOver) embed.setAuthor("Uno Game").setDescription(joined);
@@ -410,36 +423,54 @@ async function startGame(players, options, callback) {
   function createActionRows(p) {
     // player won
     if (isGameOver) return [];
-    const { hand } = p;
+    const { hand, page } = p;
     const isTurn = p.i !== iTurn;
 
-    // TODO create left and right buttons if someone has too many cards
-    // start at 1 because of draw card button
-    const rows = new Array(Math.ceil((hand.length + 1) / 5));
+    // can only show 23 cards at a time
+    const pageWidth = 23;
+    const pageOffset = Math.max(Math.min(pageWidth * page, hand.length - pageWidth), 0);
+    const shallowHand = hand.slice(pageOffset, pageOffset + pageWidth);
 
-    for (var i = 0; i < rows.length; i++) {
+    // start at 1 because of draw card button
+    const rows = new Array(Math.ceil((shallowHand.length + 1) / 5));
+
+    for (let i = 0; i < rows.length; i++) {
       rows[i] = new MessageActionRow();
     }
 
     const drawCardButton = new MessageButton()
       .setLabel("Draw")
-      .setStyle("PRIMARY")
+      .setStyle("DANGER")
       .setCustomId("draw")
       .setDisabled(isTurn);
     rows[0].addComponents([drawCardButton]);
 
-    for (var j = 0; j < hand.length; j++) {
+    const rightButton = new MessageButton().setStyle("PRIMARY").setCustomId("mRight").setEmoji("➡").setDisabled(isTurn);
+
+    const leftButton = new MessageButton().setStyle("PRIMARY").setCustomId("mLeft").setEmoji("⬅️").setDisabled(isTurn);
+
+    for (let j = 0; j < shallowHand.length; j++) {
       const r = Math.floor((j + 1) / 5);
-      const button = new MessageButton().setEmoji(getEmojiId(hand[j])).setStyle("SECONDARY").setCustomId(j.toString());
-      if (isTurn || !hand[j].playable(topCard())) button.setDisabled(true);
+      const button = new MessageButton()
+        .setEmoji(getEmojiId(shallowHand[j]))
+        .setStyle("SECONDARY")
+        .setCustomId(j.toString());
+      if (isTurn || !shallowHand[j].playable(topCard())) button.setDisabled(true);
       rows[r].addComponents([button]);
     }
 
     // if player can stack, don't let them play anything else
-    if (nStacked > 0)
+    if (nStacked > 0) {
       rows.forEach(row =>
         row.components.forEach(button => button.setDisabled(hand[button.customId]?.face !== topCard().face))
       );
+    }
+
+    if (hand.length > 24) {
+      // use left button if user is on right edge, use right button for left edge
+      rows[4].addComponents(pageOffset === hand.length - pageWidth ? leftButton : rightButton);
+    }
+
     return rows;
   }
 
@@ -501,8 +532,8 @@ function createUnoDeck() {
     "Wildcard",
     "+4",
   ];
-  for (var i = 0; i < colors.length; i++) {
-    for (var j = 0; j < faces.length; j++) {
+  for (let i = 0; i < colors.length; i++) {
+    for (let j = 0; j < faces.length; j++) {
       const card = new Card(colors[i], faces[j]);
       deck.push(card);
     }
@@ -532,7 +563,7 @@ Card.prototype.isWild = function () {
 };
 
 function shuffleDeck(deck) {
-  for (var i = deck.length - 1; i > 0; i--) {
+  for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
@@ -546,6 +577,7 @@ function Player(i, user) {
   this.name = this.user.username;
   this.hand = [];
   this.message;
+  this.page = 0;
 }
 
 Player.prototype.setMsg = function (m) {
@@ -555,7 +587,7 @@ Player.prototype.setMsg = function (m) {
 function wildCardRow() {
   const colors = ["Red", "Yellow", "Green", "Blue"];
   const wildRow = new MessageActionRow();
-  for (color of colors) {
+  for (const color of colors) {
     const button = new MessageButton()
       .setStyle("PRIMARY")
       .setCustomId(`wild${color}`)
