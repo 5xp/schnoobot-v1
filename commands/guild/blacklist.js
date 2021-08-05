@@ -95,7 +95,7 @@ module.exports = {
           if (subCommand === "command") input = client.commands.findKey(command => command.name.includes(input));
 
           if (subCommand === "command" && !input) {
-            throw new Error(`🚫 **\`${input}\` is not a valid command.**`);
+            throw new Error(`🚫 **\`${options.getString(subCommand)}\` is not a valid command.**`);
           }
 
           channel = options.getChannel("channel");
@@ -109,12 +109,12 @@ module.exports = {
           input = args[0];
 
           const command = client.commands.findKey(cmd => cmd.name.includes(input));
-          const category = client.commands.find(cmd => cmd.category === input);
+          const category = client.commands.find(cmd => cmd.category === input)?.category;
 
           input = category ?? command;
 
           if (!command && !category) {
-            throw new Error(`🚫 **\`${input}\` is not a valid category or command.**`);
+            throw new Error(`🚫 **\`${args[0]}\` is not a valid category or command.**`);
           }
 
           channel = findChannel(args?.[1], interaction) ?? null;
