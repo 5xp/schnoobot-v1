@@ -3,7 +3,6 @@ const { MessageEmbed, MessageButton, MessageActionRow } = require("discord.js");
 // TODO quit
 // TODO public lobbies and lobby list?
 // TODO chat
-// TODO fix error when over 24 cards
 
 const lobbies = new Map();
 
@@ -23,18 +22,18 @@ module.exports = {
           description: "stack +2s on +2s and +4s on +4s (default: on)",
           required: false,
           choices: [
-            { name: "on", value: "1" },
-            { name: "off", value: "0" },
+            { name: "on", value: "on" },
+            { name: "off", value: "off" },
           ],
         },
         {
           name: "draw",
           type: "STRING",
-          description: "draw one card and end turn or draw multiple until you can play (default: draw one)",
+          description: "draw one card and end turn or draw multiple until you can play (default: draw multiple)",
           required: false,
           choices: [
-            { name: "one", value: "1" },
-            { name: "multiple", value: "0" },
+            { name: "one", value: "one" },
+            { name: "multiple", value: "multiple" },
           ],
         },
       ],
@@ -71,8 +70,8 @@ module.exports = {
       // pre-game lobby
       const players = [];
 
-      const bStack = !!+(interaction?.options?.get("start")?.options?.get("stack")?.value ?? true);
-      const bDrawOne = !!+(interaction?.options?.get("start")?.options?.get("draw")?.value ?? true);
+      const bStack = (interaction?.options?.getString("stack") ?? "on") === "on";
+      const bDrawOne = (interaction?.options?.getString("draw") ?? "multiple") === "one";
 
       // create a random 4 character alphanumeric code
       const generateCode = () => Math.random().toString(36).slice(-4).toUpperCase();
