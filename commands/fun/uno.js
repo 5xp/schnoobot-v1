@@ -248,10 +248,10 @@ async function startGame(players, options, callback) {
         player.hand.pop();
         discarded.push(drawnCard);
 
-        if (!drawnCard.isWild()) history.push(`${player.name} drew and played ${drawnCard.label()}`);
-        else history.push(`${player.name} drew and played ${drawnCard.face}`);
+        if (!drawnCard.isWild()) history.push(`<@${player.id}> drew and played ${drawnCard.label()}`);
+        else history.push(`<@${player.id}> drew and played ${drawnCard.face}`);
       } else {
-        history.push(`${player.name} drew a card`);
+        history.push(`<@${player.id}> drew a card`);
 
         // if drawing multiple, restart turn
         if (!bDrawOne) {
@@ -277,7 +277,7 @@ async function startGame(players, options, callback) {
     } else if (i.customId.startsWith("wild")) {
       // handles wildcard color picking
       topCard().color = i.customId.substr(4);
-      history.push(`${player.name} changed the color to ${topCard().color}`);
+      history.push(`<@${player.id}> changed the color to ${topCard().color}`);
     } else if (i.customId.startsWith("m")) {
       i.customId === "mLeft" ? player.page-- : player.page++;
       await i.update({ components: createActionRows(player), content: handEmojis(player.hand) });
@@ -291,10 +291,10 @@ async function startGame(players, options, callback) {
 
       // let player pick a color
       if (card.isWild()) {
-        history.push(`${player.name} played ${card.face}`);
+        history.push(`<@${player.id}> played ${card.face}`);
         return;
       } else {
-        history.push(`${player.name} played ${card.label()}`);
+        history.push(`<@${player.id}> played ${card.label()}`);
       }
     }
 
