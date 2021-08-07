@@ -34,7 +34,7 @@ module.exports = {
         .setDescription(Formatters.codeBlock(urls.join("\n")));
     };
 
-    if (isSlash ? interaction?.options?.getSubCommand() === "list" : !args.length) {
+    if (isSlash ? interaction?.options?.getSubcommand() === "list" : !args.length) {
       const urls = await getURLs(interaction.guild.id);
 
       if (!urls.length) {
@@ -52,14 +52,14 @@ module.exports = {
 
         if (res) {
           const str = `✅ **Added \`${url.origin}\` to auto-dl URL list!**`;
-          interaction.reply(str);
+          interaction.reply({ content: str, ephemeral: true });
         } else {
           const str = `✅ **Removed \`${url.origin}\` from auto-dl URL list!**`;
-          interaction.reply(str);
+          interaction.reply({ content: str, ephemeral: true });
         }
       } catch (error) {
         if (error.code === "ERR_INVALID_URL") {
-          return interaction.reply({ content: "🚫 **Invalid URL!**", ephemeral: true });
+          return interaction.reply({ content: "🚫 **Invalid URL.**", ephemeral: true });
         }
       }
     }

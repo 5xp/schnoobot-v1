@@ -33,7 +33,7 @@ module.exports = {
 
     if (isSlash) {
       url = interaction.options.get("url").value;
-      interaction.defer();
+      interaction.deferReply();
     } else {
       if (!args[0]) {
         return interaction.reply(`To use this command: \`${module.exports.usage}\``);

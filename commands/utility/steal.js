@@ -31,7 +31,7 @@ module.exports = {
     if (name.length < 2 || name.length > 32) {
       return interaction.reply("🚫 **Emoji name must be between 2 and 32 characters long.**");
     }
-    await interaction.defer?.();
+    await interaction.deferReply?.();
 
     try {
       const emoji = await interaction.guild.emojis.create(url, name);

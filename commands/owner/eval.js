@@ -16,12 +16,12 @@ module.exports = {
     if (interaction.member.id !== interaction.client.application?.owner.id) {
       return;
     }
-    await interaction.defer?.({ ephemeral: true });
+    await interaction.deferReply?.({ ephemeral: true });
     try {
-      let code = content || interaction?.options.get?.("code")?.value;
+      const code = content || interaction?.options.get?.("code")?.value;
       let evaled = await eval(code);
       if (typeof evaled !== "string") evaled = require("util").inspect(evaled);
-      let cleaned = clean(evaled);
+      const cleaned = clean(evaled);
 
       if (cleaned.length > 4087) {
         const buffer = Buffer.from(cleaned, "utf-8");
@@ -42,28 +42,34 @@ module.exports = {
             await interaction.followUp({ files: [attachment] });
             i.deferUpdate();
           });
-        } else interaction.reply({ files: [attachment], allowedMentions: { repliedUser: false } });
+        } else {
+          interaction.reply({ files: [attachment], allowedMentions: { repliedUser: false } });
+        }
       } else {
         const embed = new MessageEmbed({ description: Formatters.codeBlock("xl", cleaned) });
         if (interaction.isCommand?.()) interaction.editReply({ embeds: [embed] });
         else interaction.reply({ embeds: [embed], allowedMentions: { repliedUser: false } });
       }
     } catch (err) {
-      if (interaction.isCommand?.())
+      if (interaction.isCommand?.()) {
         interaction.followUp({
           content: `\`ERROR\` ${Formatters.codeBlock("xl", clean(err))}`,
           allowedMentions: { repliedUser: false },
         });
-      else
+      } else {
         interaction.reply({
           content: `\`ERROR\` ${Formatters.codeBlock("xl", clean(err))}`,
           allowedMentions: { repliedUser: false },
         });
+      }
     }
   },
 };
+
 function clean(text) {
-  if (typeof text === "string")
+  if (typeof text === "string") {
     return text.replace(/`/g, "`" + String.fromCharCode(8203)).replace(/@/g, "@" + String.fromCharCode(8203));
-  else return text;
+  } else {
+    return text;
+  }
 }

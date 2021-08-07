@@ -25,7 +25,7 @@ module.exports = {
       });
 
     if (isSlash) {
-      await interaction.defer({ ephemeral: true });
+      await interaction.deferReply({ ephemeral: true });
       const isGlobal = interaction.options.get("global")?.value;
       if (isGlobal) {
         await setCommands(interaction.client.application?.commands);

@@ -22,7 +22,7 @@ module.exports = {
     let destination, origin;
 
     if (isSlash) {
-      await interaction.defer({ ephemeral: true });
+      await interaction.deferReply({ ephemeral: true });
       origin = interaction.options.getChannel("from") ?? interaction.member.voice.channel;
       destination = interaction.options.getChannel("destination");
       await moveToChannel(origin, destination);

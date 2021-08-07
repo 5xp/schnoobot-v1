@@ -17,6 +17,7 @@ const client = new Client({
     "GUILD_MESSAGE_REACTIONS",
   ],
   partials: ["CHANNEL"],
+  failIfNotExists: false,
 });
 
 client.once("ready", async () => {
@@ -24,7 +25,7 @@ client.once("ready", async () => {
   if (!client.application?.owner) await client.application?.fetch();
   client.user.setActivity(`for ${process.env.PREFIX}`, { type: "WATCHING" });
 
-  await mongo().then(mongoose => {
+  await mongo().then(() => {
     console.log(`Connected to MongoDB!`.green);
   });
 

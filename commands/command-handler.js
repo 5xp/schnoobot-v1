@@ -2,7 +2,6 @@ const path = require("path");
 const fs = require("fs");
 const handlerFile = "command-handler.js";
 const { getPrefix, checkBlacklisted } = require("@utils/guildsettings");
-const colors = require("colors");
 const { Collection } = require("discord.js");
 
 module.exports = client => {
@@ -65,7 +64,10 @@ module.exports = client => {
             const currentTime = new Date().toTimeString().split(" ")[0];
             console.log(`[${currentTime}] ${message.author.tag} used !${alias} ${args.join(" ")}`.yellow);
 
-            execute(message, args, args.join(" "));
+            execute(message, args, args.join(" ")).catch(error => {
+              console.error(error);
+              message.reply({ content: "🚫 **An error occurred.**" });
+            });
           }
         }
       }
@@ -78,7 +80,7 @@ module.exports = client => {
 
   client.on("interactionCreate", async interaction => {
     if (interaction.isCommand()) {
-      const command = client.commands.find(cmd => cmd.name.includes(interaction.commandName));
+      const command = client.commands.get(interaction.commandName);
       const { name, disabled = false, required_perms = [], execute } = command;
 
       const missing_perms = required_perms.filter(permission => !interaction.member.permissions.has(permission));
@@ -99,7 +101,12 @@ module.exports = client => {
       const options = interaction.options._hoistedOptions.map(option => `${option.name}: ${option.value}`);
       console.log(`[${currentTime}] ${interaction.user.tag} used /${name[0]} ${options.join(", ")}`.yellow);
 
-      execute(interaction);
+      execute(interaction).catch(error => {
+        console.error(error);
+        !interaction.deferred
+          ? interaction.reply({ content: "🚫 **An error occurred.**", ephemeral: true })
+          : interaction.followUp({ content: "🚫 **An error occurred.**", ephemeral: true });
+      });
     }
   });
 };

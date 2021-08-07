@@ -12,7 +12,7 @@ module.exports = {
       reply = await interaction.reply("**Pinging...**");
       ping = reply.createdTimestamp - interaction.createdTimestamp;
     } else {
-      reply = await interaction.defer({ fetchReply: true });
+      reply = await interaction.deferReply({ fetchReply: true });
       ping = reply.createdTimestamp - interaction.createdTimestamp;
     }
 

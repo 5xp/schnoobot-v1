@@ -17,9 +17,12 @@ module.exports = {
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
 
-    if (args?.[0] == "top" || interaction?.options?.getSubCommand() === "top") {
-      await interaction.defer?.();
-      const sortedIndex = await economySchema.find().sort({ dailystreak: -1 });
+    if (args?.[0] == "top" || interaction?.options?.getSubcommand() === "top") {
+      await interaction.deferReply?.();
+
+      const res = await economySchema.find().sort({ dailystreak: -1 });
+      const sortedIndex = res.filter(entry => entry.dailystreak > 0);
+
       const maxEntries = 10;
       let currentPage = 0;
       const numPages = Math.ceil(sortedIndex.length / maxEntries);
@@ -35,23 +38,26 @@ module.exports = {
           const index = `**#${currentPage * maxEntries + i + 1}**: <@${shallowIndex[i]._id}>\n`;
           const streak = shallowIndex[i].dailystreak || 0;
           field1.value += index;
-          field2.value += streak + "\n";
+          field2.value += streak + "🔥\n";
         }
         return [field1, field2];
       };
 
-      const createEmbed = () => {
+      const dailyTopEmbed = () => {
         return new MessageEmbed()
           .setColor("#80ff80")
           .addFields(createFields())
           .setFooter(`Page ${currentPage + 1}/${numPages}`);
       };
 
-      const leftButton = new MessageButton().setEmoji("◀").setStyle("PRIMARY").setCustomId("left");
-      const rightButton = new MessageButton().setEmoji("▶").setStyle("PRIMARY").setCustomId("right");
-
       const msgObject = () => {
-        return { components: [{ type: 1, components: [leftButton, rightButton] }], embeds: [createEmbed()] };
+        const leftButton = new MessageButton().setEmoji("◀").setStyle("PRIMARY").setCustomId("left");
+        const rightButton = new MessageButton().setEmoji("▶").setStyle("PRIMARY").setCustomId("right");
+
+        if (currentPage === numPages - 1) rightButton.setDisabled();
+        if (currentPage === 0) leftButton.setDisabled();
+
+        return { components: [{ type: 1, components: [leftButton, rightButton] }], embeds: [dailyTopEmbed()] };
       };
 
       const msg = isSlash ? await interaction.editReply(msgObject()) : await interaction.reply(msgObject());

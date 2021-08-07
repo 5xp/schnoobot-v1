@@ -56,7 +56,7 @@ module.exports = {
       deleteReminder(interaction.id);
     });
 
-    await interaction.defer?.();
+    await interaction.deferReply?.();
     const confirmEmbed = new MessageEmbed()
       .setColor("#11f0ad")
       .setTitle("New reminder")

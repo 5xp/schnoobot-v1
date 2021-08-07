@@ -55,7 +55,7 @@ module.exports = {
   async execute(interaction, args) {
     const { client, options, guild } = interaction;
     const isSlash = interaction.isCommand?.();
-    const subCommand = interaction?.options?.getSubCommand();
+    const subCommand = interaction?.options?.getSubcommand();
 
     // /blacklist list || !blacklist
     try {

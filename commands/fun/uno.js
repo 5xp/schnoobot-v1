@@ -52,7 +52,7 @@ module.exports = {
     const startButton = new MessageButton().setStyle("SUCCESS").setLabel("Start Game").setCustomId("start");
     const leaveButton = new MessageButton().setStyle("DANGER").setLabel("Leave Game").setCustomId("leave");
 
-    if (interaction?.options?.getSubCommand() === "join") {
+    if (interaction?.options?.getSubcommand() === "join") {
       const lobbyCode = interaction.options.getString("lobby").toUpperCase();
 
       if (!lobbies.has(lobbyCode)) {
@@ -65,7 +65,7 @@ module.exports = {
         return interaction.reply("You must start a game in a guild!");
       }
 
-      await interaction.defer?.();
+      await interaction.deferReply?.();
 
       // pre-game lobby
       const players = [];
@@ -126,7 +126,7 @@ module.exports = {
       }
 
       try {
-        await i.defer({ ephemeral: true });
+        await i.deferReply({ ephemeral: true });
 
         const dmMsg = await i.user.send({
           embeds: [embed],
@@ -454,7 +454,7 @@ async function startGame(players, options, callback) {
         .setEmoji(getEmojiId(shallowHand[j]))
         .setStyle("SECONDARY")
         .setCustomId(j.toString());
-      if (isTurn || !shallowHand[j].playable(topCard())) button.setDisabled(true);
+      if (isTurn || !shallowHand[j].playable(topCard())) button.setDisabled();
       rows[r].addComponents([button]);
     }
 

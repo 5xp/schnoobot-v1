@@ -94,7 +94,7 @@ module.exports = {
       .addField("**Profit on Next Tile**", `${formatMoney(nextProfit)} (${nextMult.toFixed(2)}x)`, true)
       .addField("**Win % of Next Tile**", `${numeral(winOdds).format("0.00%")}`, true);
 
-    await interaction.defer?.();
+    await interaction.deferReply?.();
     const msg = isSlash
       ? await interaction.editReply({
           components: buttonRows,
@@ -243,13 +243,13 @@ Cell.prototype.buttonState = function () {
     if (this.mine) {
       const button = mineButton;
       button.setCustomId(`${this.x * columns + this.y}`);
-      if (this.disabled) button.setDisabled(true);
+      if (this.disabled) button.setDisabled();
       else button.setDisabled(false);
       return button;
     } else {
       const button = gemButton;
       button.setCustomId(`${this.x * columns + this.y}`);
-      if (this.disabled) button.setDisabled(true);
+      if (this.disabled) button.setDisabled();
       else button.setDisabled(false);
       return button;
     }

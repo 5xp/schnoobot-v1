@@ -43,39 +43,49 @@ module.exports = {
     // hide one of dealer's cards
     dealerHand.cards[1].hidden = true;
 
-    let bjEmbed = new MessageEmbed();
+    let bjEmbed = new MessageEmbed(),
+      finish = false;
     update();
 
     // user input
-    const hitButton = new MessageButton().setLabel("Hit").setEmoji(emojis[HIT]).setStyle("SUCCESS").setCustomId("hit");
 
-    const standButton = new MessageButton()
-      .setLabel("Stand")
-      .setEmoji(emojis[STAND])
-      .setStyle("DANGER")
-      .setCustomId("stand");
+    const bjRow = gameOver => {
+      const hitButton = new MessageButton()
+        .setLabel("Hit")
+        .setEmoji(emojis[HIT])
+        .setStyle("SUCCESS")
+        .setCustomId("hit")
+        .setDisabled(gameOver);
 
-    const doubleButton = new MessageButton()
-      .setLabel("Double Down")
-      .setEmoji(emojis[DOUBLE])
-      .setStyle("PRIMARY")
-      .setCustomId("double");
+      const standButton = new MessageButton()
+        .setLabel("Stand")
+        .setEmoji(emojis[STAND])
+        .setStyle("DANGER")
+        .setCustomId("stand")
+        .setDisabled(gameOver);
 
-    if (wager * 2 > balance) doubleButton.setDisabled(true);
+      const doubleButton = new MessageButton()
+        .setLabel("Double Down")
+        .setEmoji(emojis[DOUBLE])
+        .setStyle("PRIMARY")
+        .setCustomId("double")
+        .setDisabled(gameOver);
 
-    const bjRow = new MessageActionRow().addComponents([hitButton, standButton, doubleButton]);
+      if (wager * 2 > balance) doubleButton.setDisabled();
 
-    const msg = await message.channel.send({ components: [bjRow], embeds: [bjEmbed] });
+      return new MessageActionRow().addComponents([hitButton, standButton, doubleButton]);
+    };
+
+    const msg = await message.channel.send({ components: [bjRow(finish)], embeds: [bjEmbed] });
 
     const filter = button => button.user.id === message.author.id;
     const collector = msg.createMessageComponentCollector({ filter, time: 45000 });
-    let finish = false;
 
     collector.on("collect", button => {
       if (button.customId === "hit") {
         drawCard(yourHand);
         update();
-        button.update({ components: [bjRow], embeds: [bjEmbed] });
+        button.update({ components: [bjRow(finish)], embeds: [bjEmbed] });
       } else if (button.customId === "stand") {
         // dealer starts drawing
         collector.stop("stand");
@@ -85,7 +95,7 @@ module.exports = {
           drawCard(dealerHand);
           update();
         }
-        button.update({ components: [], embeds: [bjEmbed] });
+        button.update({ components: [bjRow(finish)], embeds: [bjEmbed] });
       } else if (button.customId === "double") {
         awardMoney(message.author.id, -wager);
         wager *= 2;
@@ -100,7 +110,7 @@ module.exports = {
             update();
           }
         }
-        button.update({ components: [], embeds: [bjEmbed] });
+        button.update({ components: [bjRow(finish)], embeds: [bjEmbed] });
       }
     });
 

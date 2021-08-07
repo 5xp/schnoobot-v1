@@ -30,14 +30,14 @@ module.exports = {
     }
 
     if (isSlash ? !interaction.options.getString("command") : !args[0]) {
-      await interaction.defer?.();
+      await interaction.deferReply?.();
 
       const msgObject = () => {
         const leftButton = new MessageButton().setEmoji("◀").setStyle("PRIMARY").setCustomId("left");
         const rightButton = new MessageButton().setEmoji("▶").setStyle("PRIMARY").setCustomId("right");
 
-        if (currentPage === categories.length - 1) rightButton.setDisabled(true);
-        if (currentPage === 0) leftButton.setDisabled(true);
+        if (currentPage === categories.length - 1) rightButton.setDisabled();
+        if (currentPage === 0) leftButton.setDisabled();
 
         return {
           components: [{ type: 1, components: [leftButton, rightButton] }],
