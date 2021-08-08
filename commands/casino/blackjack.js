@@ -5,28 +5,36 @@ module.exports = {
   name: ["blackjack", "bj"],
   description: "beat dealer's hand without going over 21; dealer stands on all 17s",
   usage: `${process.env.PREFIX}blackjack <bet>`,
-  async execute(message, args) {
+  slash: true,
+  options: [{ name: "bet", type: "STRING", description: "your wager on this bet", required: true }],
+  async execute(interaction, args) {
+    const isSlash = interaction.isCommand?.();
+    const user = isSlash ? interaction.user : interaction.author;
+
     let wager;
-    if (args[0]) {
+
+    if (isSlash) {
+      wager = formatWager(interaction.options.getString("bet"));
+    } else if (args[0]) {
       wager = formatWager(args[0]);
     } else {
-      return message.reply(`⚠ **To play, use this command: \`${module.exports.usage}\`**`);
+      return interaction.reply(`⚠ **To play, use this command: \`${module.exports.usage}\`**`);
     }
 
-    const balance = await getBalance(message.author.id);
+    const balance = await getBalance(user.id);
     if (wager === "all") wager = balance;
 
     if (wager > balance) {
-      return message.reply({
+      return interaction.reply({
         content: `🚫 **Insufficient balance. Your balance is ${formatMoney(balance)}.**`,
         ephemeral: true,
       });
     } else if (wager < 0.01) {
-      return message.reply({ content: `🚫 **You must bet more than $0.00.**`, ephemeral: true });
+      return interaction.reply({ content: `🚫 **You must bet more than $0.00.**`, ephemeral: true });
     }
 
     // take money first to prevent cheating
-    awardMoney(message.author.id, -wager);
+    awardMoney(user.id, -wager);
 
     // create shuffled deck
     const deck = shuffle(createDeck()),
@@ -76,9 +84,9 @@ module.exports = {
       return new MessageActionRow().addComponents([hitButton, standButton, doubleButton]);
     };
 
-    const msg = await message.channel.send({ components: [bjRow(finish)], embeds: [bjEmbed] });
+    const msg = await interaction.reply({ components: [bjRow(finish)], embeds: [bjEmbed], fetchReply: true });
 
-    const filter = button => button.user.id === message.author.id;
+    const filter = button => button.user.id === user.id;
     const collector = msg.createMessageComponentCollector({ filter, time: 45000 });
 
     collector.on("collect", button => {
@@ -97,7 +105,7 @@ module.exports = {
         }
         button.update({ components: [bjRow(finish)], embeds: [bjEmbed] });
       } else if (button.customId === "double") {
-        awardMoney(message.author.id, -wager);
+        awardMoney(user.id, -wager);
         wager *= 2;
         drawCard(yourHand);
         update();
@@ -177,8 +185,8 @@ module.exports = {
         .addField(`Your Hand | **${yourHand.score}**`, yourHand.emoji_string)
         .addField(`Dealer's Hand | **${dealerHand.score}**`, dealerHand.emoji_string)
         .setFooter(
-          message.member.displayName,
-          message.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 })
+          interaction.member.displayName,
+          interaction.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 })
         )
         .setTimestamp();
 
@@ -188,13 +196,13 @@ module.exports = {
           bjEmbed.setColor("#00ff00");
           bjEmbed.addField("**Net Gain**", formatMoney(wager), true);
           bjEmbed.addField("**Balance**", formatMoney(balance + wager), true);
-          awardMoney(message.author.id, wager * 2);
+          awardMoney(user.id, wager * 2);
         } else if (end === 1) {
           bjEmbed.setDescription("**You drew!**");
           bjEmbed.setColor("#9ecfff");
           bjEmbed.addField("**Net Gain**", formatMoney(0), true);
           bjEmbed.addField("**Balance**", formatMoney(balance), true);
-          awardMoney(message.author.id, wager);
+          awardMoney(user.id, wager);
         } else {
           bjEmbed.setDescription("**You lost!**");
           bjEmbed.setColor("#ff0000");
