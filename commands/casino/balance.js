@@ -10,7 +10,7 @@ module.exports = {
   slash: true,
   options: [
     {
-      name: "user",
+      name: "view",
       type: "SUB_COMMAND",
       description: "get the balance of yourself or another user",
       options: [{ name: "user", type: "USER", description: "get the balance of a specific user", required: false }],
