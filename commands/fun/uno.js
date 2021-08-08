@@ -1,8 +1,8 @@
-const { MessageEmbed, MessageButton, MessageActionRow } = require("discord.js");
+const { MessageEmbed, MessageButton, MessageActionRow, Util } = require("discord.js");
 
-// TODO quit
+// TODO quit midgame
 // TODO public lobbies and lobby list?
-// TODO chat
+// TODO already in a game warning
 
 const lobbies = new Map();
 
@@ -49,20 +49,21 @@ module.exports = {
     const isSlash = interaction.isCommand?.();
 
     const joinButton = new MessageButton().setStyle("PRIMARY").setLabel("Join").setCustomId("join");
-    const startButton = new MessageButton().setStyle("SUCCESS").setLabel("Start Game").setCustomId("start");
-    const leaveButton = new MessageButton().setStyle("DANGER").setLabel("Leave Game").setCustomId("leave");
+    const startButton = new MessageButton().setStyle("SUCCESS").setLabel("Start").setCustomId("start");
+    const leaveButton = new MessageButton().setStyle("DANGER").setLabel("Quit").setCustomId("leave");
+    const dmLinkButton = new MessageButton().setStyle("LINK").setLabel("Go to DM");
 
     if (interaction?.options?.getSubcommand() === "join") {
       const lobbyCode = interaction.options.getString("lobby").toUpperCase();
 
       if (!lobbies.has(lobbyCode)) {
-        return await interaction.reply({ content: "🚫 **Error: Invalid lobby code**", ephemeral: true });
+        return await interaction.reply({ content: "🚫 **Invalid lobby code.**", ephemeral: true });
       }
 
       joinLobby(interaction, lobbies.get(lobbyCode));
     } else {
       if (!interaction.guild) {
-        return interaction.reply("You must start a game in a guild!");
+        return interaction.reply("🚫 **You must start a game in a guild.**");
       }
 
       await interaction.deferReply?.();
@@ -78,16 +79,16 @@ module.exports = {
       let lobbyCode = generateCode();
 
       // in case of a collision
-      while (lobbies.has(lobbies)) {
+      while (lobbies.has(lobbyCode)) {
         lobbyCode = generateCode();
       }
 
       const lobbyEmbed = new MessageEmbed()
         .setTitle(`Lobby \`${lobbyCode}\``)
         .addField("Player List", `\u200B`)
-        .setFooter(`${players.length} players`)
+        .setDescription(`Users can also join with \`/uno join ${lobbyCode}\``)
         .setColor("AQUA")
-        .setDescription(`Stacking: ${bStack ? "on" : "off"} | Draw: ${bDrawOne ? "once" : "multiple"}`);
+        .setFooter(`Rules: stacking ${bStack ? "on" : "off"}, draw ${bDrawOne ? "once" : "multiple"}`);
 
       let lobbyMsg;
       if (isSlash) {
@@ -121,22 +122,35 @@ module.exports = {
     }
     async function joinLobby(i, lobby) {
       const { players, msg, embed, collector, bStack, bDrawOne } = lobby;
-      if (players.map(player => player.id).includes(i.user.id)) {
-        return i.reply({ content: "You are already in the game!", ephemeral: true });
+      const player = players.find(player => player.id === i.user.id);
+
+      if (player) {
+        dmLinkButton.setURL(`https://discord.com/channels/@me/${player.message.channel.id}`);
+        return i.reply({
+          content: `⚠️ **You are already in the game.**`,
+          components: [{ type: 1, components: [dmLinkButton] }],
+          ephemeral: true,
+        });
       }
 
       try {
         await i.deferReply({ ephemeral: true });
 
-        const dmMsg = await i.user.send({
-          embeds: [embed],
-          components: [{ type: 1, components: [startButton, leaveButton] }],
-        });
+        const dmMsg = await i.user
+          .send({
+            embeds: [embed],
+            components: [{ type: 1, components: [startButton, leaveButton] }],
+          })
+          .catch(() => {
+            return i.editReply({
+              content: "🚫 **Failed to join UNO. Please enable DMs in this server's privacy settings and try again.**",
+              ephemeral: true,
+            });
+          });
         const player = new Player(players.length, i.member.user);
         players.push(player);
 
         embed.fields[0].value = players.map(player => `*${player.name}*`).join("\n") || "\u200B";
-        embed.setFooter(`${players.length} players`);
         msg.edit({ embeds: [embed], components: [{ type: 1, components: [joinButton] }] });
 
         player.setMsg(dmMsg);
@@ -145,48 +159,57 @@ module.exports = {
           p.message.edit({ embeds: [embed], components: [{ type: 1, components: [startButton, leaveButton] }] });
         }
 
+        dmLinkButton.setURL(`https://discord.com/channels/@me/${dmMsg.channel.id}`);
+
         i.followUp({
-          content: `You have joined uno! Click here to open our DM: https://discord.com/channels/@me/${dmMsg.channel.id}`,
+          content: `✅ **You have joined UNO!**`,
+          components: [{ type: 1, components: [dmLinkButton] }],
           ephemeral: true,
         });
 
-        // wait for start or leave button press
-        const dmI = await dmMsg.awaitMessageComponent({
-          filter: i => (!collector.ended && players.length > 1) || i.customId === "leave",
-        });
-
-        if (dmI.customId === "leave") {
-          players.splice(players.indexOf(player));
-
-          dmI.reply({ content: "You have left Uno", ephemeral: true });
-          embed.fields[0].value = players.map(player => `*${player.name}*`).join("\n") || "\u200B";
-          embed.setFooter(`${players.length} players`);
-
-          msg.edit({ embeds: [embed], components: [{ type: 1, components: [joinButton] }] });
-          for (const p of players) {
-            if (p !== player) {
-              p.message.edit({ embeds: [embed], components: [{ type: 1, components: [startButton, leaveButton] }] });
-            }
-          }
-
-          dmMsg.delete();
-        } else {
-          // start game
-          dmI.deferUpdate();
-          collector.stop();
-          embed.setTitle("Game in progress");
-          msg.edit({ embeds: [embed], components: [] });
-          lobbies.delete(lobby.code);
-          startGame(players, { bStack, bDrawOne: bDrawOne }, winner => {
-            // game ended
-            embed.setTitle(`${winner.name} won the game!`).setColor("ORANGE");
-            msg.edit({ embeds: [embed] });
+        try {
+          // wait for start or leave button press
+          const dmI = await dmMsg.awaitMessageComponent({
+            filter: i => (!collector.ended && players.length > 1) || i.customId === "leave",
           });
+
+          if (dmI.customId === "leave") {
+            players.splice(players.indexOf(player));
+
+            dmI.reply({ content: "✅ **You have left UNO.**", ephemeral: true });
+            embed.fields[0].value = players.map(player => `*${player.name}*`).join("\n") || "\u200B";
+
+            msg.edit({ embeds: [embed], components: [{ type: 1, components: [joinButton] }] });
+            for (const p of players) {
+              if (p !== player) {
+                p.message.edit({ embeds: [embed], components: [{ type: 1, components: [startButton, leaveButton] }] });
+              }
+            }
+
+            dmMsg.delete();
+          } else {
+            // start game
+            dmI.deferUpdate();
+            collector.stop();
+            embed.setTitle("Game in progress");
+            msg.edit({ embeds: [embed], components: [] });
+            lobbies.delete(lobby.code);
+            startGame(players, { bStack, bDrawOne: bDrawOne }, winner => {
+              // game ended
+              embed.setTitle(`${winner.name} won the game!`).setColor("ORANGE");
+              embed.description = null;
+              msg.edit({ embeds: [embed] });
+              for (const p of players) {
+                p.collector.stop();
+              }
+            });
+          }
+        } catch {
+          // ignore message delete error
         }
       } catch (error) {
-        console.log(error);
         await i.editReply({
-          content: "Failed to join Uno! Please enable DMs in this server's privacy settings and try again.",
+          content: "🚫 **Failed to join UNO. Please enable DMs in this server's privacy settings and try again.**",
           ephemeral: true,
         });
         return;
@@ -213,7 +236,8 @@ async function startGame(players, options, callback) {
     // wrap around if turn exceeds number of players
     nextTurn = () => (iTurn + n() + players.length) % players.length,
     // gets last played card
-    topCard = () => discarded[discarded.length - 1];
+    topCard = () => discarded[discarded.length - 1],
+    chatMessages = [];
 
   // randomize first turn
   iTurn = Math.floor(Math.random() * players.length);
@@ -227,101 +251,124 @@ async function startGame(players, options, callback) {
 
   // edit the dm
   for (const player of players) {
-    await player.message.edit({
-      content: handEmojis(player.hand),
-      embeds: [createUnoEmbed(player)],
-      components: createActionRows(player),
+    const filter = m => !m.author.bot;
+    const messageCollector = player.message.channel.createMessageCollector({ filter });
+
+    // save collector so it can be stopped later
+    player.setCollector(messageCollector);
+
+    player.message.edit(playerUpdateObject(player));
+
+    messageCollector.on("collect", async m => {
+      chatMessages.push(`${m.author.toString()}: ${m.content}`);
+
+      for (const p of players) {
+        if (p !== player) {
+          p.message.edit(playerUpdateObject(p));
+        }
+      }
+
+      // resend game message so it doesn't get lost in chat
+
+      const msg = await player.user.send({
+        content: handEmojis(player.hand),
+        embeds: createUnoEmbed(player),
+        components: player.pickingColor ? [wildCardRow(player)] : createActionRows(player),
+      });
+
+      player.message.delete();
+      player.setMsg(msg);
+
+      if (player.i === iTurn || player.pickingColor) {
+        startTurn(player);
+      }
     });
   }
 
   startTurn(players[iTurn]);
 
   async function startTurn(player) {
-    const i = await player.message.awaitMessageComponent();
-    if (i.customId === "draw") {
-      const drawnCard = drawCard(player.hand);
+    try {
+      const i = await player.message.awaitMessageComponent();
+      if (i.customId === "draw") {
+        const drawnCard = drawCard(player.hand);
 
-      // check if drawn card is playable and play it
-      if (drawnCard.playable(topCard())) {
-        await playSpecial(drawnCard, i);
-        player.hand.pop();
-        discarded.push(drawnCard);
+        // check if drawn card is playable and play it
+        if (drawnCard.playable(topCard())) {
+          player.hand.pop();
+          discarded.push(drawnCard);
 
-        if (!drawnCard.isWild()) history.push(`<@${player.id}> drew and played ${drawnCard.label()}`);
-        else history.push(`<@${player.id}> drew and played ${drawnCard.face}`);
-      } else {
-        history.push(`<@${player.id}> drew a card`);
+          if (!drawnCard.isWild()) history.push(`${player.user.toString()} drew and played ${drawnCard.label()}`);
+          else history.push(`${player.user.toString()} drew and played ${drawnCard.face}`);
+          await playSpecial(drawnCard, i);
+        } else {
+          history.push(`${player.user.toString()} drew a card`);
 
-        // if drawing multiple, restart turn
-        if (!bDrawOne) {
-          await i.update({
-            content: handEmojis(player.hand),
-            embeds: [createUnoEmbed(player)],
-            components: createActionRows(player),
-          });
-          for (const p of players) {
-            if (p !== player) {
-              p.message.edit({
-                content: handEmojis(p.hand),
-                embeds: [createUnoEmbed(p)],
-                components: createActionRows(p),
-              });
+          // if drawing multiple, restart turn
+          if (!bDrawOne) {
+            await i.update(playerUpdateObject(player));
+
+            for (const p of players) {
+              if (p !== player) {
+                p.message.edit(playerUpdateObject(p));
+              }
             }
-          }
-          startTurn(player);
-          return;
-        }
-      }
-      if (drawnCard.isWild()) return;
-    } else if (i.customId.startsWith("wild")) {
-      // handles wildcard color picking
-      topCard().color = i.customId.substr(4);
-      history.push(`<@${player.id}> changed the color to ${topCard().color}`);
-    } else if (i.customId.startsWith("m")) {
-      i.customId === "mLeft" ? player.page-- : player.page++;
-      await i.update({ components: createActionRows(player), content: handEmojis(player.hand) });
-      startTurn(player);
-      return;
-    } else {
-      const card = player.hand[i.customId];
-      player.hand.splice(i.customId, 1);
-      await playSpecial(card, i);
-      discarded.push(card);
 
-      // let player pick a color
-      if (card.isWild()) {
-        history.push(`<@${player.id}> played ${card.face}`);
+            startTurn(player);
+            return;
+          }
+        }
+        if (drawnCard.isWild()) return;
+      } else if (i.customId.startsWith("wild")) {
+        // handles wildcard color picking
+        topCard().setColor(i.customId.substr(4));
+        history.push(`${player.user.toString()} changed the color to ${topCard().color}`);
+        player.pickingColor = false;
+      } else if (i.customId.startsWith("m")) {
+        i.customId === "mLeft" ? player.prevPage() : player.nextPage();
+        await i.update({ components: createActionRows(player), content: handEmojis(player.hand) });
+        startTurn(player);
         return;
       } else {
-        history.push(`<@${player.id}> played ${card.label()}`);
+        const card = player.hand[i.customId];
+        player.hand.splice(i.customId, 1);
+        discarded.push(card);
+
+        // let player pick a color
+        if (card.isWild()) {
+          history.push(`${player.user.toString()} played ${card.face}`);
+          await playSpecial(card, i);
+          return;
+        } else {
+          history.push(`${player.user.toString()} played ${card.label()}`);
+        }
+        await playSpecial(card, i);
       }
-    }
 
-    if (player.hand.length === 0) {
-      // player wins
-      isGameOver = true;
-      winner = player;
-    }
-
-    // advance turn and update each player
-    iTurn = nextTurn();
-
-    await i.update({
-      content: handEmojis(player.hand),
-      embeds: [createUnoEmbed(player)],
-      components: createActionRows(player),
-    });
-
-    for (const p of players) {
-      if (p !== player) {
-        p.message.edit({ content: handEmojis(p.hand), embeds: [createUnoEmbed(p)], components: createActionRows(p) });
+      if (player.hand.length === 0) {
+        // player wins
+        isGameOver = true;
+        winner = player;
       }
-    }
 
-    if (isGameOver) {
-      callback(winner);
-    } else {
-      startTurn(players[iTurn]);
+      // advance turn and update each player
+      iTurn = nextTurn();
+
+      await i.update(playerUpdateObject(player));
+
+      for (const p of players) {
+        if (p !== player) {
+          p.message.edit(playerUpdateObject(p));
+        }
+      }
+
+      if (isGameOver) {
+        callback(winner);
+      } else {
+        startTurn(players[iTurn]);
+      }
+    } catch {
+      // ignore collector message delete error
     }
   }
 
@@ -340,7 +387,7 @@ async function startGame(players, options, callback) {
 
       case "+2":
         // check if next player has a +2
-        if (players[nextTurn()].hand.map(card => card.face).includes("+2") && bStack) {
+        if (bStack && players[nextTurn()].hand.map(card => card.face).includes("+2")) {
           nStacked++;
         } else {
           // if not, draw each +2 to next player
@@ -351,21 +398,36 @@ async function startGame(players, options, callback) {
         break;
 
       case "+4":
-        if (players[nextTurn()].hand.map(card => card.face).includes("+4") && bStack) {
+        // check if next player has a +4
+        player.pickingColor = true;
+
+        await i.update({
+          embeds: createUnoEmbed(player),
+          components: [wildCardRow()],
+          content: handEmojis(player.hand),
+        });
+
+        if (bStack && players[nextTurn()].hand.map(card => card.face).includes("+4")) {
           nStacked++;
         } else {
-          // if not, draw each +2 to next player
+          // if not, draw each +4 to next player
           drawCard(players[nextTurn()].hand, (nStacked + 1) * 4);
           nStacked = 0;
           iTurn = nextTurn();
         }
         // restart the turn so player can pick a color
-        await i.update({ components: [wildCardRow()], content: handEmojis(player.hand) });
         startTurn(player);
         break;
 
       case "Wildcard":
-        await i.update({ components: [wildCardRow()], content: handEmojis(player.hand) });
+        player.pickingColor = true;
+
+        await i.update({
+          embeds: createUnoEmbed(player),
+          components: [wildCardRow()],
+          content: handEmojis(player.hand),
+        });
+
         startTurn(player);
         break;
     }
@@ -377,7 +439,7 @@ async function startGame(players, options, callback) {
         `${players[iTurn].name}'s turn`,
         players[iTurn].user.avatarURL({ format: "png", dynamic: true, size: 2048 })
       )
-      .setColor(topCard().color.toUpperCase());
+      .setColor(topCard().color?.toUpperCase() || "NOT_QUITE_BLACK");
 
     // bold user's name and underline turn
     const fields = players.map(player => {
@@ -387,16 +449,33 @@ async function startGame(players, options, callback) {
       return name;
     });
 
-    let desc, joined;
+    let desc, joined, chat;
 
     if (isReverse) desc = fields.join(" < ");
     else desc = fields.join(" > ");
+    if (isGameOver) desc = "";
 
-    if (history.length > 0) {
-      if (history.length > 4) {
-        history.splice(0, history.length - 4);
-      }
-      joined = history.join("\n");
+    if (chatMessages.length) {
+      chat = chatMessages.slice(-4);
+
+      // shorten chat messages and remove newlines so you can't spam
+      chat = chat.map(message => {
+        message.substr(0, 170);
+        return message.replace(/\n/g, "");
+      });
+
+      joined = chat.join("\n");
+
+      joined = Util.escapeMarkdown(joined);
+
+      desc = desc.concat(`\n\n**Chat**\n${joined}`);
+    }
+
+    if (history.length) {
+      const shortHistory = history.slice(-4);
+
+      joined = shortHistory.join("\n");
+
       desc = desc.concat(`\n\n*${joined}*`);
     }
 
@@ -413,22 +492,52 @@ async function startGame(players, options, callback) {
       }
     }
 
-    if (isGameOver) embed.setAuthor("Uno Game").setDescription(joined);
+    if (isGameOver) {
+      embed.setAuthor("Uno Game");
+      const chatEmbed = createChatEmbed(chatMessages);
+      if (chatEmbed) return [embed, chatEmbed];
+    }
 
-    return embed;
+    if (nStacked > 0) {
+      embed.setFooter(`Current stack: +${topCard().face === "+2" ? nStacked * 2 : nStacked * 4}`);
+    }
+
+    return [embed];
+  }
+
+  function createChatEmbed(chat) {
+    if (!chat.length) return;
+
+    // shorten chat messages and remove newlines so you can't spam
+    chat = chat.map(message => {
+      message.substr(0, 170);
+      return message.replace(/\n/g, "");
+    });
+
+    let joined = chat.join("\n");
+
+    joined = Util.escapeMarkdown(joined);
+
+    return new MessageEmbed().setTitle("Chat Log").setColor("BLURPLE").setDescription(joined);
   }
 
   // turns player hand into MessageActionRows and MessageButtons
   function createActionRows(p) {
     // player won
     if (isGameOver) return [];
-    const { hand, page } = p;
-    const isTurn = p.i !== iTurn;
 
-    // can only show 23 cards at a time
-    const pageWidth = 23;
-    const pageOffset = Math.max(Math.min(pageWidth * page, hand.length - pageWidth), 0);
-    const shallowHand = hand.slice(pageOffset, pageOffset + pageWidth);
+    const { hand, handOffset } = p;
+
+    const isTurn = p.i === iTurn;
+
+    // clamp between 0 and hand.length - 24;
+    const offset = Math.max(Math.min(handOffset, hand.length - 24), 0);
+    p.handOffset = offset;
+
+    // can only show 23-24 cards at a time
+    const pageWidth = handOffset >= hand.length - 24 ? 24 : 23;
+
+    const shallowHand = hand.slice(offset, offset + pageWidth);
 
     // start at 1 because of draw card button
     const rows = new Array(Math.ceil((shallowHand.length + 1) / 5));
@@ -441,42 +550,66 @@ async function startGame(players, options, callback) {
       .setLabel("Draw")
       .setStyle("DANGER")
       .setCustomId("draw")
-      .setDisabled(isTurn);
-    rows[0].addComponents([drawCardButton]);
+      .setDisabled(!isTurn);
 
-    const rightButton = new MessageButton().setStyle("PRIMARY").setCustomId("mRight").setEmoji("➡").setDisabled(isTurn);
+    const rightButton = new MessageButton()
+      .setStyle("PRIMARY")
+      .setCustomId("mRight")
+      .setEmoji("➡")
+      .setDisabled(!isTurn);
 
-    const leftButton = new MessageButton().setStyle("PRIMARY").setCustomId("mLeft").setEmoji("⬅️").setDisabled(isTurn);
+    const leftButton = new MessageButton().setStyle("PRIMARY").setCustomId("mLeft").setEmoji("⬅️").setDisabled(!isTurn);
+
+    if (offset === 0) {
+      rows[0].addComponents([drawCardButton]);
+    } else {
+      rows[0].addComponents([leftButton]);
+    }
 
     for (let j = 0; j < shallowHand.length; j++) {
       const r = Math.floor((j + 1) / 5);
+
       const button = new MessageButton()
         .setEmoji(getEmojiId(shallowHand[j]))
         .setStyle("SECONDARY")
-        .setCustomId(j.toString());
-      if (isTurn || !shallowHand[j].playable(topCard())) button.setDisabled();
+        .setCustomId((j + offset).toString());
+
+      if (!isTurn || !shallowHand[j].playable(topCard())) button.setDisabled();
       rows[r].addComponents([button]);
     }
 
+    // don't show right button on last page
+    if (hand.length > pageWidth && pageWidth === 23) {
+      rows[4].addComponents(rightButton);
+    }
+
     // if player can stack, don't let them play anything else
-    if (nStacked > 0) {
+    if (nStacked > 0 && isTurn) {
       rows.forEach(row =>
-        row.components.forEach(button => button.setDisabled(hand[button.customId]?.face !== topCard().face))
+        row.components.forEach(button => {
+          // don't disable page buttons
+          if (!button.customId.startsWith("m")) button.setDisabled(hand[button.customId]?.face !== topCard().face);
+        })
       );
     }
 
-    if (hand.length > 24) {
-      // use left button if user is on right edge, use right button for left edge
-      rows[4].addComponents(pageOffset === hand.length - pageWidth ? leftButton : rightButton);
-    }
-
     return rows;
+  }
+
+  function playerUpdateObject(p) {
+    const obj = {
+      content: handEmojis(p.hand),
+      embeds: createUnoEmbed(p),
+      components: createActionRows(p),
+    };
+    return obj;
   }
 
   function drawCard(hand, n = 1) {
     // if we run out of cards, replace with discarded pile and shuffle
     if (deck.length === 0) {
       console.log("We ran out of cards!");
+      // swap deck and discarded pile
       [deck, discarded] = [discarded, deck];
       discarded.push(deck.pop());
       shuffleDeck(deck);
@@ -534,6 +667,7 @@ function createUnoDeck() {
   for (let i = 0; i < colors.length; i++) {
     for (let j = 0; j < faces.length; j++) {
       const card = new Card(colors[i], faces[j]);
+      if (card.isWild()) card.setColor(null);
       deck.push(card);
     }
   }
@@ -561,6 +695,10 @@ Card.prototype.isWild = function () {
   return this.face === "+4" || this.face === "Wildcard";
 };
 
+Card.prototype.setColor = function (color) {
+  this.color = color;
+};
+
 function shuffleDeck(deck) {
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -576,11 +714,25 @@ function Player(i, user) {
   this.name = this.user.username;
   this.hand = [];
   this.message;
-  this.page = 0;
+  this.handOffset = 0;
+  this.pickingColor = false;
+  this.collector;
 }
+
+Player.prototype.nextPage = function () {
+  this.handOffset += 23;
+};
+
+Player.prototype.prevPage = function () {
+  this.handOffset -= 23;
+};
 
 Player.prototype.setMsg = function (m) {
   this.message = m;
+};
+
+Player.prototype.setCollector = function (c) {
+  this.collector = c;
 };
 
 function wildCardRow() {
@@ -601,22 +753,37 @@ function wildCardRow() {
 
 // create a string of emojis to show your hand
 const handEmojis = (hand, hidden = false) => {
+  if (!hand.length) return null;
+
+  // hidden for embed fields
   if (hidden) {
-    return "<:b_:863057739546230814> ".repeat(hand.length) || null;
+    // unlikely but over 42 cards and it will exceed 1024 character field limit
+    const maxLength = 42;
+    const emojiString = "<:b_:863057739546230814>".repeat(Math.min(hand.length, maxLength));
+    if (emojiString.length >= maxLength * 24) return emojiString + " …";
+    return emojiString;
   }
-  const strings = hand.map(card => getEmojiString(card)).join(" ");
-  return strings || null;
+
+  // over 83 cards and it will exceed 2000 character limit
+  const maxLength = 83;
+  const emojiString = hand.map(card => getEmojiString(card));
+
+  if (emojiString.length > 83) {
+    return emojiString.slice(0, maxLength).join("") + " …";
+  }
+
+  return emojiString.join("");
 };
 
-const getEmojiId = (card, played = false) => {
-  const clr = card.color[0].toLowerCase();
+const getEmojiId = card => {
+  const clr = card.color?.[0]?.toLowerCase();
   switch (card.face) {
     case "Wildcard":
-      if (played) return emojis[clr + "b"];
-      return "863005935911043082";
+      if (!clr) return "863005935911043082";
+      return emojis[clr + "b"];
     case "+4":
-      if (played) return emojis[clr + "f"];
-      return "863005936100835328";
+      if (!clr) return "863005936100835328";
+      return emojis[clr + "f"];
     case "Skip":
       return emojis[clr + "s"];
     case "+2":
@@ -629,7 +796,7 @@ const getEmojiId = (card, played = false) => {
 };
 
 const getEmojiString = card => {
-  const clr = card.color[0].toLowerCase();
+  const clr = card.color?.[0]?.toLowerCase();
   switch (card.face) {
     case "Wildcard":
       return "<:w:863005935911043082>";
