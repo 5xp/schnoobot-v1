@@ -35,7 +35,7 @@ module.exports = client => {
   client.on("messageCreate", async message => {
     if (message.author.bot) return;
     const { member, content, guild } = message;
-    const prefix = guild ? await getPrefix(guild) : process.env.PREFIX;
+    const prefix = await getPrefix(guild?.id);
 
     if (content.startsWith(prefix)) {
       for (const command of client.commands.values()) {

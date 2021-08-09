@@ -4,10 +4,12 @@ const urlCache = new Map();
 const blacklistCache = new Map();
 
 async function getPrefix(guildId) {
+  if (!guildId) return process.env.PREFIX;
+
   if (prefixCache.has(guildId)) return prefixCache.get(guildId);
 
   const res = await settingsSchema.findById(guildId);
-  if (!res || !res.prefix) {
+  if (!res?.prefix) {
     prefixCache.set(guildId, process.env.PREFIX);
     return process.env.PREFIX;
   } else {
