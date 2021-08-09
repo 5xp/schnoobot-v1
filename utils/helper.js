@@ -3,6 +3,7 @@ const fetch = require("node-fetch");
 
 async function findMember(query, interaction) {
   if (!query) return;
+
   const members = await interaction.guild.members.search({ query, limit: 1 });
   let member = members?.first();
 
@@ -25,6 +26,7 @@ function findVoice(query, interaction) {
   if (!query) return;
 
   query = query.toLowerCase();
+
   // search cache with id
   let vc = interaction.guild.channels.cache.get(query);
 
@@ -54,30 +56,15 @@ const downloadFile = async (url, path) => {
   });
 };
 
-function sanitizeString(str) {
-  str = str.replace(/[^a-z0-9áéíóúñü \.,_-]/gim, "");
-  return str.trim();
-}
+const trunc = (number, decimals) => Math.trunc(number * Math.pow(10, decimals)) / Math.pow(10, decimals);
 
-trunc = (number, decimals) => Math.trunc(number * Math.pow(10, decimals)) / Math.pow(10, decimals);
-
-randomRange = (min, max) => Math.random() * (max - min) + min;
-
-function timeToString(ms) {
-  hours = Math.floor(ms / 60000 / 60);
-  minutes = Math.floor((ms / 60000) % 60);
-  if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
-  else if (hours > 0 && minutes == 0) return `${hours}h`;
-  else return `${minutes}m`;
-}
+const randomRange = (min, max) => Math.random() * (max - min) + min;
 
 module.exports = {
   findMember,
   findVoice,
   downloadFile,
-  sanitizeString,
   trunc,
   randomRange,
-  timeToString,
   findChannel,
 };

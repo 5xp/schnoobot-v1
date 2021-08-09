@@ -1,6 +1,6 @@
 const { MessageEmbed, MessageButton, MessageActionRow } = require("discord.js");
 const numeral = require("numeral");
-const { awardPoints, getUserData } = require("@utils/coin");
+const { awardMoney, getBalance, formatWager, formatMoney, toNumber } = require("@utils/economy");
 
 const columns = 5;
 const rows = 5;
@@ -10,12 +10,9 @@ const factorial = [
   1124000727777607680000, 25852016738884976640000, 620448401733239439360000, 15511210043330985984000000,
 ];
 
-// beginning state of all buttons
 const hiddenButton = new MessageButton().setLabel(" ").setStyle("SECONDARY").setCustomId("hiddenButton");
-// revealed gem
-const gemButton = new MessageButton().setEmoji("💎").setStyle("PRIMARY").setCustomId("gemButton"); //.setDisabled(true);
-// revealed mine
-const mineButton = new MessageButton().setEmoji("💣").setStyle("DANGER").setCustomId("mineButton"); //.setDisabled(true);
+const gemButton = new MessageButton().setEmoji("💎").setStyle("PRIMARY").setCustomId("gemButton");
+const mineButton = new MessageButton().setEmoji("💣").setStyle("DANGER").setCustomId("mineButton");
 const cashoutButton = new MessageButton().setLabel("Cash out").setStyle("SUCCESS").setCustomId("cashoutButton");
 
 module.exports = {
@@ -29,78 +26,75 @@ module.exports = {
   ],
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
-    var numMines, wager, user;
+    let numMines, wager, user;
 
     if (isSlash) {
       numMines = interaction.options.get("mines").value;
-      wager =
-        interaction.options.get("bet").value.toLowerCase() === "all"
-          ? "all"
-          : numeral(interaction.options.get("bet").value).value();
+      wager = formatWager(interaction.options.getString("bet"));
       user = interaction.user;
     } else {
       user = interaction.author;
+
       if (args[0] && args[1]) {
-        numMines = Math.round(numeral(args[0]).value());
-        wager = args[1].toLowerCase() === "all" ? "all" : numeral(numeral(args[1]).format("0.00")).value();
+        numMines = Math.floor(toNumber(args[0]));
+        wager = formatWager(args[1]);
       } else {
         return interaction.reply({
-          content: `To play, use this command: \`${module.exports.usage}\``,
-          ephemeral: true,
+          content: `⚠ **To play, use this command: \`${module.exports.usage}\`**`,
         });
       }
     }
 
-    if (numMines < 1 || numMines > 24)
-      return interaction.reply({ content: "You must have between 1-24 mines!", ephemeral: true });
+    if (numMines < 1 || numMines > 24) {
+      return interaction.reply({ content: "⚠ **You must choose between 1-24 mines.**", ephemeral: true });
+    }
 
-    const data = await getUserData(user);
-    var balance = data === null ? 0 : +data.coins.toString();
+    const balance = await getBalance(user.id);
     if (wager === "all") wager = balance;
 
     if (wager > balance) {
       return interaction.reply({
-        content: `Insufficient balance! Your balance is **${numeral(balance).format("$0,0.00")}**.`,
+        content: `🚫 **Insufficient balance! Your balance is ${formatMoney(balance)}**.`,
         ephemeral: true,
       });
     } else if (wager < 0.01) {
-      return interaction.reply({ content: `You must bet more than $0!`, ephemeral: true });
+      return interaction.reply({ content: `🚫 **You must bet more than $0.00.**`, ephemeral: true });
     }
 
     // set up
-    let grid = createArray(rows, columns);
-    let cells = [];
-    for (var i = 0; i < rows; i++) {
-      for (var j = 0; j < columns; j++) {
+    const grid = createArray(rows, columns);
+    const cells = [];
+
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < columns; j++) {
         grid[i][j] = new Cell(i, j);
         cells.push([i, j]);
       }
     }
 
     // randomly assign mines
-    for (var n = 0; n < numMines; n++) {
-      let index = Math.floor(Math.random() * cells.length);
-      let i = cells[index][0];
-      let j = cells[index][1];
+    for (let n = 0; n < numMines; n++) {
+      const index = Math.floor(Math.random() * cells.length);
+      const i = cells[index][0];
+      const j = cells[index][1];
 
       cells.splice(index, 1);
       grid[i][j].mine = true;
     }
 
     // create array of MessageActionRows
-    var buttonRows = createButtonGrid(rows, columns, grid);
+    let buttonRows = createButtonGrid(rows, columns, grid);
 
-    let [, , nextProfit, nextMult, winOdds] = calculateMultiplier(numMines, 0, wager);
-
+    const { currentProfit, currentMult, nextProfit, nextMult, winOdds } = calculateMultiplier(numMines, 0, wager);
     let minesEmbed = new MessageEmbed()
       .setTitle("💣 Mines")
       .setColor("#ffffff")
       .addField("**Mines**", numMines.toString(), true)
-      .addField("**Total Profit**", `${numeral(0).format("$0,0.00")} (1.00x)`, true)
-      .addField("**Profit on Next Tile**", `${numeral(nextProfit).format("$0,0.00")} (${nextMult.toFixed(2)}x)`, true)
+      .addField("**Total Profit**", `${formatMoney(currentProfit)} (${currentMult}x)`, true)
+      .addField("**Profit on Next Tile**", `${formatMoney(nextProfit)} (${nextMult.toFixed(2)}x)`, true)
       .addField("**Win % of Next Tile**", `${numeral(winOdds).format("0.00%")}`, true);
 
-    await interaction.defer?.();
+    await interaction.deferReply?.();
     const msg = isSlash
       ? await interaction.editReply({
           components: buttonRows,
@@ -115,14 +109,14 @@ module.exports = {
 
     // have to send a second message for the 26th button
     // send a 1x1 image to get a small gap
-    const msg2 = await interaction.channel.send({
+    const cashoutMessage = await interaction.channel.send({
       components: [{ type: 1, components: [cashoutButton] }],
       files: ["https://cdn.discordapp.com/attachments/793778786943762434/858505668481515540/image.png"],
     });
 
     const btnFilter = button => button.user.id === user.id;
-    const btnCollector = msg.createMessageComponentCollector({ btnFilter });
-    const cashoutCollector = msg2.createMessageComponentCollector({ btnFilter });
+    const btnCollector = msg.createMessageComponentCollector({ filter: btnFilter });
+    const cashoutCollector = cashoutMessage.awaitMessageComponent({ filter: btnFilter });
 
     let cellsRevealed = 0;
 
@@ -137,60 +131,50 @@ module.exports = {
 
       // game over, reveal each cell
       if (grid[row][col].mine) {
-        let [currentProfit, currentMult, nextProfit, nextMult, winOdds, currentOdds] = calculateMultiplier(
-          numMines,
-          cellsRevealed,
-          wager
-        );
+        const { nextProfit, nextMult, winOdds } = calculateMultiplier(numMines, cellsRevealed, wager);
+
         btnCollector.stop();
-        cashoutCollector.stop();
-        msg2.delete();
+        cashoutMessage.delete();
         revealGrid(grid);
+
         minesEmbed = new MessageEmbed()
           .setTitle("💣 Mines")
           .setDescription("**You lost!**")
           .setColor("ff0000")
           .addField("**Mines**", numMines.toString(), true)
-          .addField("**Profit**", numeral(-wager).format("$0,0.00"), true)
-          .addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true)
-          .addField("**Potential Profit**", `${numeral(nextProfit).format("$0,0.00")} (${nextMult.toFixed(2)}x)`, true)
+          .addField("**Profit**", formatMoney(-wager), true)
+          .addField("**Balance**", formatMoney(balance - wager), true)
+          .addField("**Potential Profit**", `${formatMoney(nextProfit)} (${nextMult.toFixed(2)}x)`, true)
           .addField("**Win %**", numeral(winOdds).format("0.00%"), true);
 
-        awardPoints(user, -wager);
+        awardMoney(user.id, -wager);
       } else {
         cellsRevealed++;
-        let [currentProfit, currentMult, nextProfit, nextMult, winOdds, currentOdds] = calculateMultiplier(
-          numMines,
-          cellsRevealed,
-          wager
-        );
+        const res = calculateMultiplier(numMines, cellsRevealed, wager);
+        const { currentProfit, currentMult, currentOdds, nextMult, nextProfit, winOdds } = res;
 
         // revealed all non-mines
         if (25 - numMines == cellsRevealed) {
           btnCollector.stop();
-          cashoutCollector.stop();
-          msg2.delete();
+          cashoutMessage.delete();
           revealGrid(grid);
+
           minesEmbed = new MessageEmbed()
             .setDescription("**You won!**")
             .setTitle("💣 Mines")
             .setColor("#2bff00")
-            .addField("**Profit**", `${numeral(currentProfit).format("$0,0.00")} (${currentMult.toFixed(2)}x)`, true)
-            .addField("**Balance**", numeral(balance + currentProfit).format("$0,0.00"), true)
+            .addField("**Profit**", `${formatMoney(currentProfit)} (${currentMult.toFixed(2)}x)`, true)
+            .addField("**Balance**", formatMoney(balance + currentProfit), true)
             .addField("**Win %**", numeral(currentOdds).format("0.00%"), true);
 
-          awardPoints(user, currentProfit);
+          awardMoney(user.id, currentProfit);
         } else {
           minesEmbed = new MessageEmbed()
             .setTitle("💣 Mines")
             .setColor("#ffffff")
             .addField("**Mines**", numMines.toString(), true)
-            .addField("**Total Profit**", `${numeral(currentProfit).format("$0,0.00")} (${currentMult}x)`, true)
-            .addField(
-              "**Profit on Next Tile**",
-              `${numeral(nextProfit).format("$0,0.00")} (${nextMult.toFixed(2)}x)`,
-              true
-            )
+            .addField("**Total Profit**", `${formatMoney(currentProfit)} (${currentMult}x)`, true)
+            .addField("**Profit on Next Tile**", `${formatMoney(nextProfit)} (${nextMult.toFixed(2)}x)`, true)
             .addField("**Win % of Next Tile**", `${numeral(winOdds).format("0.00%")}`, true);
         }
       }
@@ -199,27 +183,23 @@ module.exports = {
       button.update({ components: buttonRows, embeds: [minesEmbed] });
     });
 
-    cashoutCollector.on("collect", button => {
-      if (button.customId === "cashoutButton") {
-        let [currentProfit, currentMult, nextProfit, nextMult, winOdds, currentOdds] = calculateMultiplier(
-          numMines,
-          cellsRevealed,
-          wager
-        );
-        cashoutCollector.stop();
+    cashoutCollector
+      .then(button => {
+        const res = calculateMultiplier(numMines, cellsRevealed, wager);
         btnCollector.stop();
+        cashoutMessage.delete();
         revealGrid(grid);
-        msg2.delete();
 
         if (cellsRevealed > 0) {
+          const { currentProfit, currentMult, currentOdds } = res;
           minesEmbed = new MessageEmbed()
             .setTitle("💣 Mines")
             .setColor("#2bff00")
-            .addField("**Profit**", `${numeral(currentProfit).format("$0,0.00")} (${currentMult.toFixed(2)}x)`, true)
-            .addField("**Balance**", numeral(balance + currentProfit).format("$0,0.00"), true)
+            .addField("**Profit**", `${formatMoney(currentProfit)} (${currentMult.toFixed(2)}x)`, true)
+            .addField("**Balance**", formatMoney(balance + currentProfit), true)
             .addField("**Win %**", numeral(currentOdds).format("0.00%"), true);
 
-          awardPoints(user, currentProfit);
+          awardMoney(user.id, currentProfit);
 
           buttonRows = createButtonGrid(rows, columns, grid);
           button.deferUpdate();
@@ -228,21 +208,23 @@ module.exports = {
           minesEmbed = new MessageEmbed()
             .setTitle("💣 Mines")
             .setColor("#ffffff")
-            .addField("**Profit**", `${numeral(0).format("$0,0.00")} (1.00x)`, true)
-            .addField("**Balance**", numeral(balance).format("$0,0.00"), true);
+            .addField("**Profit**", `${formatMoney(0)} (1.00x)`, true)
+            .addField("**Balance**", formatMoney(balance), true);
 
           buttonRows = createButtonGrid(rows, columns, grid);
           button.deferUpdate();
           msg.edit({ components: buttonRows, embeds: [minesEmbed] });
         }
-      }
-    });
+      })
+      .catch(() => {
+        // ignore message delete error
+      });
   },
 };
 
 function createArray(rows, cols) {
-  let arr = new Array(rows);
-  for (var i = 0; i < arr.length; i++) {
+  const arr = new Array(rows);
+  for (let i = 0; i < arr.length; i++) {
     arr[i] = new Array(cols);
   }
   return arr;
@@ -259,20 +241,20 @@ function Cell(x, y) {
 Cell.prototype.buttonState = function () {
   if (this.revealed) {
     if (this.mine) {
-      let button = mineButton;
+      const button = mineButton;
       button.setCustomId(`${this.x * columns + this.y}`);
-      if (this.disabled) button.setDisabled(true);
+      if (this.disabled) button.setDisabled();
       else button.setDisabled(false);
       return button;
     } else {
-      let button = gemButton;
+      const button = gemButton;
       button.setCustomId(`${this.x * columns + this.y}`);
-      if (this.disabled) button.setDisabled(true);
+      if (this.disabled) button.setDisabled();
       else button.setDisabled(false);
       return button;
     }
   } else {
-    let button = hiddenButton;
+    const button = hiddenButton;
     button.setCustomId(`${this.x * columns + this.y}`);
     return button;
   }
@@ -285,10 +267,10 @@ Cell.prototype.reveal = function (specific = true) {
 
 function createButtonGrid(rows, columns, grid) {
   // create discord buttons
-  let buttonRows = new Array(rows);
-  for (var i = 0; i < rows; i++) {
+  const buttonRows = new Array(rows);
+  for (let i = 0; i < rows; i++) {
     buttonRows[i] = new MessageActionRow();
-    for (var j = 0; j < columns; j++) {
+    for (let j = 0; j < columns; j++) {
       buttonRows[i].addComponents([grid[i][j].buttonState()]);
     }
   }
@@ -298,12 +280,12 @@ function createButtonGrid(rows, columns, grid) {
 // bombs + clicked mines
 function calculateMultiplier(mines, revealed, wager) {
   const currentOdds = winProbability(mines, revealed);
-  const nextOdds = winProbability(mines, revealed + 1);
+  const winOdds = winProbability(mines, revealed + 1);
   const currentMult = Math.round(100 * (1 / currentOdds)) / 100;
   const currentProfit = wager * currentMult - wager;
-  const nextMult = Math.round(100 * (1 / nextOdds)) / 100;
+  const nextMult = Math.round(100 * (1 / winOdds)) / 100;
   const nextProfit = wager * nextMult - wager;
-  return [currentProfit, currentMult, nextProfit, nextMult, nextOdds, currentOdds];
+  return { currentProfit, currentMult, nextProfit, nextMult, winOdds, currentOdds, numMines: mines };
 }
 
 const winProbability = (mines, revealed) =>

@@ -1,5 +1,4 @@
-const { getDaily } = require("@utils/coin");
-const numeral = require("numeral");
+const { getDaily, formatMoney, checkDailyAvailable } = require("@utils/economy");
 const { MessageEmbed, MessageButton } = require("discord.js");
 const economySchema = require("@schemas/economy-schema");
 
@@ -18,9 +17,12 @@ module.exports = {
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
 
-    if (args?.[0] == "top" || interaction?.options?.getSubCommand() === "top") {
-      await interaction.defer?.();
-      const sortedIndex = await economySchema.find().sort({ dailystreak: -1 });
+    if (args?.[0] == "top" || interaction?.options?.getSubcommand() === "top") {
+      await interaction.deferReply?.();
+
+      const res = await economySchema.find().sort({ dailystreak: -1 });
+      const sortedIndex = res.filter(entry => entry.dailystreak > 0);
+
       const maxEntries = 10;
       let currentPage = 0;
       const numPages = Math.ceil(sortedIndex.length / maxEntries);
@@ -36,23 +38,26 @@ module.exports = {
           const index = `**#${currentPage * maxEntries + i + 1}**: <@${shallowIndex[i]._id}>\n`;
           const streak = shallowIndex[i].dailystreak || 0;
           field1.value += index;
-          field2.value += streak + "\n";
+          field2.value += streak + "🔥\n";
         }
         return [field1, field2];
       };
 
-      const createEmbed = () => {
+      const dailyTopEmbed = () => {
         return new MessageEmbed()
           .setColor("#80ff80")
           .addFields(createFields())
           .setFooter(`Page ${currentPage + 1}/${numPages}`);
       };
 
-      const leftButton = new MessageButton().setEmoji("◀").setStyle("PRIMARY").setCustomId("left");
-      const rightButton = new MessageButton().setEmoji("▶").setStyle("PRIMARY").setCustomId("right");
-
       const msgObject = () => {
-        return { components: [{ type: 1, components: [leftButton, rightButton] }], embeds: [createEmbed()] };
+        const leftButton = new MessageButton().setEmoji("◀").setStyle("PRIMARY").setCustomId("left");
+        const rightButton = new MessageButton().setEmoji("▶").setStyle("PRIMARY").setCustomId("right");
+
+        if (currentPage === numPages - 1) rightButton.setDisabled();
+        if (currentPage === 0) leftButton.setDisabled();
+
+        return { components: [{ type: 1, components: [leftButton, rightButton] }], embeds: [dailyTopEmbed()] };
       };
 
       const msg = isSlash ? await interaction.editReply(msgObject()) : await interaction.reply(msgObject());
@@ -73,26 +78,32 @@ module.exports = {
       });
     } else {
       const user = isSlash ? interaction.user : interaction.member.user;
-      const data = await getDaily(user);
-      const dailyEmbed = new MessageEmbed();
-      const timestamp = Math.floor((Date.now() + dailyAvailable) / 1000);
+      const { awarded, data } = await getDaily(user.id);
+      const { dailystreak: dailyStreak, lastdaily: lastDaily, coins: balance } = data;
 
-      if (data.awarded === true) {
+      const dailyAvailable = checkDailyAvailable(lastDaily);
+      const dailyAvailableTimestamp = Math.floor((Date.now() + dailyAvailable) / 1000);
+
+      const dailyEmbed = new MessageEmbed();
+
+      let fields;
+      if (awarded) {
         dailyEmbed.setColor("#fc03d3");
+
         fields = [
           {
             name: "**Reward**",
-            value: data.reward,
+            value: formatMoney(1000 * dailyStreak),
             inline: true,
           },
           {
             name: "**New Balance**",
-            value: data.new_balance,
+            value: formatMoney(balance),
             inline: true,
           },
           {
             name: "**Streak**",
-            value: data.streak + "🔥",
+            value: dailyStreak + "🔥",
             inline: true,
           },
         ];
@@ -102,17 +113,17 @@ module.exports = {
         fields = [
           {
             name: "**Daily Available**",
-            value: `<t:${timestamp}:R>\n<t:${timestamp}:t>`,
+            value: `<t:${dailyAvailableTimestamp}:R>\n<t:${dailyAvailableTimestamp}:t>`,
             inline: true,
           },
           {
             name: "**Balance**",
-            value: data.new_balance,
+            value: formatMoney(balance),
             inline: true,
           },
           {
             name: "**Streak**",
-            value: data.streak + "🔥",
+            value: dailyStreak + "🔥",
             inline: true,
           },
         ];

@@ -1,95 +1,99 @@
 const { MessageEmbed, MessageButton, MessageActionRow } = require("discord.js");
-const { awardPoints, getUserData } = require("@utils/coin");
-const numeral = require("numeral");
-var blackjackCache = {};
+const { awardMoney, getBalance, formatMoney, formatWager } = require("@utils/economy");
 
 module.exports = {
   name: ["blackjack", "bj"],
   description: "beat dealer's hand without going over 21; dealer stands on all 17s",
   usage: `${process.env.PREFIX}blackjack <bet>`,
-  async execute(message, args) {
-    if (blackjackCache[message.author.id]) {
-      var inProgress = true;
-    }
-    if (!inProgress) {
-      if (args[0] !== undefined) {
-        var wager = args[0].toLowerCase() === "all" ? "all" : numeral(numeral(args[0]).format("0.00")).value();
-      } else {
-        return message.reply(`to play, use this command: \`${module.exports.usage}\``);
-      }
+  slash: true,
+  options: [{ name: "bet", type: "STRING", description: "your wager on this bet", required: true }],
+  async execute(interaction, args) {
+    const isSlash = interaction.isCommand?.();
+    const user = isSlash ? interaction.user : interaction.author;
 
-      let data = await getUserData(message.author);
-      var balance = data === null ? 0 : +data.coins.toString();
-      if (wager === "all") wager = balance;
+    let wager;
 
-      if (wager > balance) {
-        return message.reply(`insufficient balance! Your balance is **${numeral(balance).format("$0,0.00")}**.`);
-      } else if (wager < 0.01) {
-        return message.reply(`you must bet more than $0!`);
-      }
-
-      // create shuffled deck
-      var deck = shuffle(createDeck()),
-        yourHand = { cards: [], score: 0, emoji_string: "" },
-        dealerHand = { cards: [], score: 0, emoji_string: "" },
-        hands = [dealerHand, yourHand];
-
-      // deal cards to player and dealer
-      for (var i = 0; i < 2; i++) {
-        drawCard(yourHand);
-        drawCard(dealerHand);
-      }
-
-      // hide one of dealer's cards
-      dealerHand.cards[1].hidden = true;
+    if (isSlash) {
+      wager = formatWager(interaction.options.getString("bet"));
+    } else if (args[0]) {
+      wager = formatWager(args[0]);
     } else {
-      // resume game
-      var deck = blackjackCache[message.author.id].deck,
-        yourHand = blackjackCache[message.author.id].hands[1],
-        dealerHand = blackjackCache[message.author.id].hands[0];
-      hands = [dealerHand, yourHand];
-      if (blackjackCache[message.author.id].collector !== undefined) blackjackCache[message.author.id].collector.stop();
-
-      let data = await getUserData(message.author);
-      var balance = data === null ? 0 : +data.coins.toString();
-      var wager = blackjackCache[message.author.id].wager < balance ? blackjackCache[message.author.id].wager : balance;
+      return interaction.reply(`⚠ **To play, use this command: \`${module.exports.usage}\`**`);
     }
 
-    var bjEmbed = new MessageEmbed();
+    const balance = await getBalance(user.id);
+    if (wager === "all") wager = balance;
+
+    if (wager > balance) {
+      return interaction.reply({
+        content: `🚫 **Insufficient balance. Your balance is ${formatMoney(balance)}.**`,
+        ephemeral: true,
+      });
+    } else if (wager < 0.01) {
+      return interaction.reply({ content: `🚫 **You must bet more than $0.00.**`, ephemeral: true });
+    }
+
+    // take money first to prevent cheating
+    awardMoney(user.id, -wager);
+
+    // create shuffled deck
+    const deck = shuffle(createDeck()),
+      yourHand = { cards: [], score: 0, emoji_string: "" },
+      dealerHand = { cards: [], score: 0, emoji_string: "" },
+      hands = [dealerHand, yourHand];
+
+    // deal cards to player and dealer
+    for (let i = 0; i < 2; i++) {
+      drawCard(yourHand);
+      drawCard(dealerHand);
+    }
+
+    // hide one of dealer's cards
+    dealerHand.cards[1].hidden = true;
+
+    let bjEmbed = new MessageEmbed(),
+      finish = false;
     update();
 
-    if (inProgress) message.channel.send("Finish your previous game first!");
-
     // user input
-    let hitButton = new MessageButton().setLabel("Hit").setEmoji(emojis[HIT]).setStyle("SUCCESS").setCustomId("hit");
 
-    let standButton = new MessageButton()
-      .setLabel("Stand")
-      .setEmoji(emojis[STAND])
-      .setStyle("DANGER")
-      .setCustomId("stand");
+    const bjRow = gameOver => {
+      const hitButton = new MessageButton()
+        .setLabel("Hit")
+        .setEmoji(emojis[HIT])
+        .setStyle("SUCCESS")
+        .setCustomId("hit")
+        .setDisabled(gameOver);
 
-    let doubleButton = new MessageButton()
-      .setLabel("Double Down")
-      .setEmoji(emojis[DOUBLE])
-      .setStyle("PRIMARY")
-      .setCustomId("double");
+      const standButton = new MessageButton()
+        .setLabel("Stand")
+        .setEmoji(emojis[STAND])
+        .setStyle("DANGER")
+        .setCustomId("stand")
+        .setDisabled(gameOver);
 
-    if (wager * 2 > balance) doubleButton.setDisabled(true);
+      const doubleButton = new MessageButton()
+        .setLabel("Double Down")
+        .setEmoji(emojis[DOUBLE])
+        .setStyle("PRIMARY")
+        .setCustomId("double")
+        .setDisabled(gameOver);
 
-    let bjRow = new MessageActionRow().addComponents([hitButton, standButton, doubleButton]);
+      if (wager * 2 > balance) doubleButton.setDisabled();
 
-    const msg = await message.channel.send({ components: [bjRow], embeds: [bjEmbed] });
+      return new MessageActionRow().addComponents([hitButton, standButton, doubleButton]);
+    };
 
-    const filter = button => button.user.id === message.author.id;
+    const msg = await interaction.reply({ components: [bjRow(finish)], embeds: [bjEmbed], fetchReply: true });
+
+    const filter = button => button.user.id === user.id;
     const collector = msg.createMessageComponentCollector({ filter, time: 45000 });
-    var finish = false;
 
     collector.on("collect", button => {
       if (button.customId === "hit") {
         drawCard(yourHand);
         update();
-        button.update({ components: [bjRow], embeds: [bjEmbed] });
+        button.update({ components: [bjRow(finish)], embeds: [bjEmbed] });
       } else if (button.customId === "stand") {
         // dealer starts drawing
         collector.stop("stand");
@@ -99,8 +103,9 @@ module.exports = {
           drawCard(dealerHand);
           update();
         }
-        button.update({ components: [], embeds: [bjEmbed] });
+        button.update({ components: [bjRow(finish)], embeds: [bjEmbed] });
       } else if (button.customId === "double") {
+        awardMoney(user.id, -wager);
         wager *= 2;
         drawCard(yourHand);
         update();
@@ -113,7 +118,7 @@ module.exports = {
             update();
           }
         }
-        button.update({ components: [], embeds: [bjEmbed] });
+        button.update({ components: [bjRow(finish)], embeds: [bjEmbed] });
       }
     });
 
@@ -123,12 +128,12 @@ module.exports = {
     }
 
     function update() {
-      for (var i = 0; i < hands.length; i++) {
+      for (let i = 0; i < hands.length; i++) {
         hands[i].score = 0;
         hands[i].emoji_string = "";
         hands[i].string = "";
 
-        for (var j = 0; j < hands[i].cards.length; j++) {
+        for (let j = 0; j < hands[i].cards.length; j++) {
           if (hands[i].cards[j].value === "A") hands[i].cards[j].weight = 1;
 
           if (!hands[i].cards[j].hidden) {
@@ -143,7 +148,7 @@ module.exports = {
           hands[i].bust = true;
           collector.stop("bust");
         } else {
-          for (var j = 0; j < hands[i].cards.length; j++) {
+          for (let j = 0; j < hands[i].cards.length; j++) {
             if (!hands[i].cards[j].hidden && hands[i].cards[j].value === "A" && hands[i].score + 10 <= 21) {
               hands[i].cards[j].weight = 11;
               hands[i].score += 10;
@@ -157,18 +162,20 @@ module.exports = {
         }
       }
 
+      let end;
+
       if (
         (yourHand.score > dealerHand.score && !yourHand.bust && dealerHand.score >= 17) ||
         dealerHand.bust ||
         yourHand.blackjack
       ) {
-        var end = 0;
+        end = 0;
         finish = true;
       } else if (yourHand.score == dealerHand.score && dealerHand.score >= 17) {
-        var end = 1;
+        end = 1;
         finish = true;
       } else if (dealerHand.score >= 17 || yourHand.bust) {
-        var end = 2;
+        end = 2;
         finish = true;
       }
 
@@ -178,36 +185,29 @@ module.exports = {
         .addField(`Your Hand | **${yourHand.score}**`, yourHand.emoji_string)
         .addField(`Dealer's Hand | **${dealerHand.score}**`, dealerHand.emoji_string)
         .setFooter(
-          message.member.displayName,
-          message.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 })
+          interaction.member.displayName,
+          interaction.member.user.avatarURL({ format: "png", dynamic: true, size: 2048 })
         )
         .setTimestamp();
 
-      blackjackCache[message.author.id] = {
-        hands,
-        deck,
-        wager,
-      };
-
       if (finish) {
-        delete blackjackCache[message.author.id];
         if (end === 0) {
           bjEmbed.setDescription("**You won!**");
           bjEmbed.setColor("#00ff00");
-          bjEmbed.addField("**Net Gain**", numeral(wager).format("$0,0.00"), true);
-          bjEmbed.addField("**Balance**", numeral(balance + wager).format("$0,0.00"), true);
-          awardPoints(message.author, wager);
+          bjEmbed.addField("**Net Gain**", formatMoney(wager), true);
+          bjEmbed.addField("**Balance**", formatMoney(balance + wager), true);
+          awardMoney(user.id, wager * 2);
         } else if (end === 1) {
           bjEmbed.setDescription("**You drew!**");
           bjEmbed.setColor("#9ecfff");
-          bjEmbed.addField("**Net Gain**", numeral(0).format("$0,0.00"), true);
-          bjEmbed.addField("**Balance**", numeral(balance).format("$0,0.00"), true);
+          bjEmbed.addField("**Net Gain**", formatMoney(0), true);
+          bjEmbed.addField("**Balance**", formatMoney(balance), true);
+          awardMoney(user.id, wager);
         } else {
           bjEmbed.setDescription("**You lost!**");
           bjEmbed.setColor("#ff0000");
-          bjEmbed.addField("**Net Gain**", numeral(-wager).format("$0,0.00"), true);
-          bjEmbed.addField("**Balance**", numeral(balance - wager).format("$0,0.00"), true);
-          awardPoints(message.author, -wager);
+          bjEmbed.addField("**Net Gain**", formatMoney(-wager), true);
+          bjEmbed.addField("**Balance**", formatMoney(balance - wager), true);
         }
       }
     }
@@ -222,60 +222,43 @@ const HIT = 52,
   BACK = 55;
 
 function createDeck() {
-  var deck = [];
-  for (var i = 0; i < suits.length; i++) {
-    for (var j = 0; j < values.length; j++) {
+  const deck = [];
+  for (let i = 0; i < suits.length; i++) {
+    for (let j = 0; j < values.length; j++) {
+      let weight;
       switch (values[j]) {
         case "J":
-          var weight = 10;
+          weight = 10;
           break;
         case "Q":
-          var weight = 10;
+          weight = 10;
           break;
         case "K":
-          var weight = 10;
+          weight = 10;
           break;
         case "A":
-          var weight = 1;
+          weight = 1;
           break;
         default:
-          var weight = +values[j];
+          weight = +values[j];
       }
-      var card = { suit: suits[i], value: values[j], weight: weight, hidden: false };
+      const card = { suit: suits[i], value: values[j], weight: weight, hidden: false };
       deck.push(card);
     }
   }
-  for (var i = 0; i < deck.length; i++) {
+  for (let i = 0; i < deck.length; i++) {
     deck[i]["emoji"] = emojis[i];
   }
   return deck;
 }
 
 function shuffle(deck) {
-  for (var i = deck.length - 1; i > 0; i--) {
+  for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
   return deck;
 }
-
-async function removeReactions(message, id) {
-  const userReactions = message.reactions.cache.filter(reaction => reaction.users.cache.has(id));
-  try {
-    for (const reaction of userReactions.values()) {
-      await reaction.users.remove(id);
-    }
-  } catch (error) {
-    console.error("Failed to remove reactions.");
-  }
-}
-
-Math.seed = function (s) {
-  return function () {
-    s = Math.sin(s) * 10000;
-    return s - Math.floor(s);
-  };
-};
 
 const emojis = [
   "<:card_1:838283412904738847>",

@@ -1,4 +1,4 @@
-const { MessageEmbed, Message } = require("discord.js");
+const { MessageEmbed } = require("discord.js");
 
 module.exports = {
   name: ["steal", "emoji"],
@@ -12,13 +12,13 @@ module.exports = {
   ],
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
-    let url, name;
+    let url, name, attachment;
 
     if (isSlash) {
       url = interaction.options.get("url").value;
       name = interaction.options.get("name").value;
     } else {
-      let attachment = interaction.attachments.first();
+      attachment = interaction.attachments.first();
 
       if ((!args[0] || !args[1]) && (!attachment || !args[0])) {
         return interaction.reply(`⚠ **To use this command: \`${module.exports.usage}\`**`);
@@ -28,10 +28,10 @@ module.exports = {
       name = attachment ? args[0] : args[1];
     }
 
-    if (name.length < 2 || name.length > 32)
+    if (name.length < 2 || name.length > 32) {
       return interaction.reply("🚫 **Emoji name must be between 2 and 32 characters long.**");
-
-    await interaction.defer?.();
+    }
+    await interaction.deferReply?.();
 
     try {
       const emoji = await interaction.guild.emojis.create(url, name);
@@ -53,16 +53,15 @@ module.exports = {
             ? interaction.editReply("🚫 **Guild has reached maximum emoji capacity.**")
             : interaction.reply("🚫 **Guild has reached maximum emoji capacity.**");
           break;
-        case 50035:
-          isSlash
-            ? interaction.editReply("🚫 **Invalid image data.**")
-            : interaction.reply("🚫 **Invalid image data.**");
+        case 50035: {
+          const message = error.message.replace("Invalid Form Body\nimage: ", "");
+          isSlash ? interaction.editReply(`🚫 **${message}**`) : interaction.reply(`🚫 **${message}**`);
           break;
+        }
         default:
           isSlash
             ? interaction.editReply("🚫 **An error occurred, please try again later.**")
             : interaction.reply("🚫 **An error occurred, please try again later.**");
-          console.error(error);
       }
     }
   },

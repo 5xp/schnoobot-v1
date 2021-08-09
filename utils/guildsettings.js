@@ -4,10 +4,12 @@ const urlCache = new Map();
 const blacklistCache = new Map();
 
 async function getPrefix(guildId) {
+  if (!guildId) return process.env.PREFIX;
+
   if (prefixCache.has(guildId)) return prefixCache.get(guildId);
 
   const res = await settingsSchema.findById(guildId);
-  if (!res || !res.prefix) {
+  if (!res?.prefix) {
     prefixCache.set(guildId, process.env.PREFIX);
     return process.env.PREFIX;
   } else {
@@ -135,9 +137,11 @@ async function removeBlacklist(guildId, data) {
 async function checkBlacklisted(interaction, command) {
   const { guild, channel } = interaction;
   const { name, category } = command;
-  const blacklist = await getBlacklist(guild.id);
 
-  if (category === "guild") return false;
+  // no blacklist in dms and prevent blacklisting guild config
+  if (!guild || category === "guild") return false;
+
+  const blacklist = await getBlacklist(guild.id);
 
   if (name[0] in blacklist) {
     if (blacklist[name[0]].includes(channel.id) || blacklist[name[0]].includes(null)) return true;

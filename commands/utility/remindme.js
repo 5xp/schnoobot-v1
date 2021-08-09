@@ -42,7 +42,7 @@ module.exports = {
       user = interaction.author;
     }
 
-    let reminderMessage = reason ? `**Reminder:** ${reason}` : "**Reminder!**";
+    const reminderMessage = reason ? `**Reminder:** ${reason}` : "**Reminder!**";
     const reminderEmbed = new MessageEmbed().setColor("#f0b111").setTitle("Reminder!");
     if (reason) reminderEmbed.setDescription(reminderMessage);
 
@@ -56,7 +56,7 @@ module.exports = {
       deleteReminder(interaction.id);
     });
 
-    await interaction.defer?.();
+    await interaction.deferReply?.();
     const confirmEmbed = new MessageEmbed()
       .setColor("#11f0ad")
       .setTitle("New reminder")

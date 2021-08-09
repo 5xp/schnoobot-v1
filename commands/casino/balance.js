@@ -1,6 +1,5 @@
-const { getUserData, dailyIn } = require("@utils/coin");
+const { getUserData, checkDailyAvailable, formatMoney } = require("@utils/economy");
 const { findMember } = require("@utils/helper");
-const numeral = require("numeral");
 const { MessageEmbed, MessageButton } = require("discord.js");
 const economySchema = require("@schemas/economy-schema");
 
@@ -11,7 +10,7 @@ module.exports = {
   slash: true,
   options: [
     {
-      name: "user",
+      name: "view",
       type: "SUB_COMMAND",
       description: "get the balance of yourself or another user",
       options: [{ name: "user", type: "USER", description: "get the balance of a specific user", required: false }],
@@ -21,9 +20,12 @@ module.exports = {
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
 
-    if (args?.[0] === "top" || interaction?.options?.getSubCommand() === "top") {
-      await interaction.defer?.();
-      const sortedIndex = await economySchema.find().sort({ coins: -1 });
+    if (args?.[0] === "top" || interaction?.options?.getSubcommand() === "top") {
+      await interaction.deferReply?.();
+
+      const res = await economySchema.find().sort({ coins: -1 });
+      const sortedIndex = res.filter(entry => entry.coins > 0);
+
       const maxEntries = 10;
       let currentPage = 0;
       const numPages = Math.ceil(sortedIndex.length / maxEntries);
@@ -37,25 +39,28 @@ module.exports = {
 
         for (let i = 0; i < shallowIndex.length; i++) {
           const index = `**#${currentPage * maxEntries + i + 1}**: <@${shallowIndex[i]._id}>\n`;
-          const bal = `*${numeral(+shallowIndex[i].coins.toString()).format("$0,00.00")}*\n`;
+          const bal = `*${formatMoney(shallowIndex[i].coins)}*\n`;
           field1.value += index;
           field2.value += bal;
         }
         return [field1, field2];
       };
 
-      const createEmbed = () => {
+      const balanceTopEmbed = () => {
         return new MessageEmbed()
           .setColor("#80ff80")
           .addFields(createFields())
           .setFooter(`Page ${currentPage + 1}/${numPages}`);
       };
 
-      const leftButton = new MessageButton().setEmoji("◀").setStyle("PRIMARY").setCustomId("left");
-      const rightButton = new MessageButton().setEmoji("▶").setStyle("PRIMARY").setCustomId("right");
-
       const msgObject = () => {
-        return { components: [{ type: 1, components: [leftButton, rightButton] }], embeds: [createEmbed()] };
+        const leftButton = new MessageButton().setEmoji("◀").setStyle("PRIMARY").setCustomId("left");
+        const rightButton = new MessageButton().setEmoji("▶").setStyle("PRIMARY").setCustomId("right");
+
+        if (currentPage === numPages - 1) rightButton.setDisabled();
+        if (currentPage === 0) leftButton.setDisabled();
+
+        return { components: [{ type: 1, components: [leftButton, rightButton] }], embeds: [balanceTopEmbed()] };
       };
 
       const msg = isSlash ? await interaction.editReply(msgObject()) : await interaction.reply(msgObject());
@@ -66,7 +71,7 @@ module.exports = {
       collector.on("collect", button => {
         if (button.customId === "right") {
           currentPage++;
-          currentPage = Math.min(currentPage, numPages);
+          currentPage = Math.min(currentPage, numPages - 1);
           button.update(msgObject());
         } else {
           currentPage--;
@@ -85,22 +90,19 @@ module.exports = {
 
       if (!user) return interaction.reply("🚫 **Could not find this user.**");
 
-      const data = await getUserData(user);
+      const res = await getUserData(user.id);
+      const { coins: balance = 0, lastdaily: lastDaily = 0, dailystreak: dailyStreak = 0 } = res;
 
-      const balance = data?.coins ? +data.coins.toString() : "0";
-      const lastdaily = data?.lastdaily;
-      const streak = data?.dailystreak ? data.dailystreak + "🔥" : "0";
-
-      const dailyAvailable = dailyIn(lastdaily);
+      const dailyAvailable = checkDailyAvailable(lastDaily);
       const timestamp = Math.floor((Date.now() + dailyAvailable) / 1000);
       const dailystr = dailyAvailable === true ? "now" : `<t:${timestamp}:R>\n<t:${timestamp}:t>`;
 
       const balanceEmbed = new MessageEmbed()
         .setColor("#0000FF")
         .setAuthor(`${user.username}'s balance`, user.avatarURL())
-        .addField("**Balance**", numeral(balance).format("$0,0.00"), true)
-        .addField("**Daily available**", dailystr, true)
-        .addField("**Streak**", streak, true);
+        .addField("**Balance**", formatMoney(balance), true)
+        .addField("**Daily Available**", dailystr, true)
+        .addField("**Streak**", `${dailyStreak || 0}🔥`, true);
 
       interaction.reply({ embeds: [balanceEmbed], allowedMentions: { repliedUser: false } });
     }
