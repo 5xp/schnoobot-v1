@@ -8,6 +8,9 @@
     "start": "node .",
     "lint": "eslint ."
   },
+  "engines": {
+    "node": "16.6.1"
+  },
   "author": "chris#4000",
   "license": "ISC",
   "dependencies": {
