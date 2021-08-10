@@ -227,8 +227,7 @@ async function startGame(players, options, callback) {
     isGameOver = false,
     winner;
 
-  let deck = shuffleDeck(createUnoDeck()),
-    discarded = [];
+  let deck = shuffleDeck(createUnoDeck());
 
   const history = [],
     // increments or decrements if reversed
@@ -237,12 +236,15 @@ async function startGame(players, options, callback) {
     nextTurn = () => (iTurn + n() + players.length) % players.length,
     // gets last played card
     topCard = () => discarded[discarded.length - 1],
-    chatMessages = [];
+    chatMessages = [],
+    discarded = [];
 
   // randomize first turn
   iTurn = Math.floor(Math.random() * players.length);
 
-  discarded.push(deck.pop());
+  // place first card
+  const validCardIndex = deck.findIndex(card => !card.isWild());
+  discarded.push(deck.splice(validCardIndex, 1)[0]);
 
   // deal cards
   for (const player of players) {
@@ -264,7 +266,9 @@ async function startGame(players, options, callback) {
 
       for (const p of players) {
         if (p !== player) {
-          p.message.edit(playerUpdateObject(p));
+          p.message.edit({
+            embeds: createUnoEmbed(p),
+          });
         }
       }
 
@@ -324,6 +328,17 @@ async function startGame(players, options, callback) {
         topCard().setColor(i.customId.substr(4));
         history.push(`${player.user.toString()} changed the color to ${topCard().color}`);
         player.pickingColor = false;
+
+        if (topCard().face === "+4") {
+          if (bStack && players[nextTurn()].hand.map(card => card.face).includes("+4")) {
+            nStacked++;
+          } else {
+            // if not, draw each +4 to next player
+            drawCard(players[nextTurn()].hand, (nStacked + 1) * 4);
+            nStacked = 0;
+            iTurn = nextTurn();
+          }
+        }
       } else if (i.customId.startsWith("m")) {
         i.customId === "mLeft" ? player.prevPage() : player.nextPage();
         await i.update({ components: createActionRows(player), content: handEmojis(player.hand) });
@@ -407,14 +422,6 @@ async function startGame(players, options, callback) {
           content: handEmojis(player.hand),
         });
 
-        if (bStack && players[nextTurn()].hand.map(card => card.face).includes("+4")) {
-          nStacked++;
-        } else {
-          // if not, draw each +4 to next player
-          drawCard(players[nextTurn()].hand, (nStacked + 1) * 4);
-          nStacked = 0;
-          iTurn = nextTurn();
-        }
         // restart the turn so player can pick a color
         startTurn(player);
         break;
@@ -606,18 +613,9 @@ async function startGame(players, options, callback) {
   }
 
   function drawCard(hand, n = 1) {
-    // if we run out of cards, replace with discarded pile and shuffle
+    // if we run out of cards, create new deck
     if (deck.length === 0) {
-      console.log("We ran out of cards!");
-      // swap deck and discarded pile
-      [deck, discarded] = [discarded, deck];
-      discarded.push(deck.pop());
-      shuffleDeck(deck);
-    }
-
-    // rare - should only happen if discarded pile is also empty
-    if (deck.length === 0) {
-      console.log("Deck is still empty - refilling");
+      console.log("Deck is empty - refilling");
       deck = shuffleDeck(createUnoDeck());
     }
 
