@@ -1,10 +1,10 @@
-const { MessageEmbed, MessageButton, MessageActionRow, Util } = require("discord.js");
+const { MessageEmbed, MessageButton, MessageActionRow, Util, Collection } = require("discord.js");
+const EventEmitter = require("events");
 
-// TODO quit midgame
 // TODO public lobbies and lobby list?
-// TODO already in a game warning
+// TODO use ready up instead of start game
 
-const lobbies = new Map();
+const lobbies = new Collection();
 
 module.exports = {
   name: "uno",
@@ -44,6 +44,12 @@ module.exports = {
       description: "join a specific lobby",
       options: [{ name: "lobby", type: "STRING", description: "the code of the lobby to join", required: true }],
     },
+    {
+      name: "leave",
+      type: "SUB_COMMAND",
+      description: "leave a game",
+      options: [{ name: "lobby", type: "STRING", description: "the code of the lobby to leave", required: true }],
+    },
   ],
   async execute(interaction) {
     const isSlash = interaction.isCommand?.();
@@ -57,10 +63,31 @@ module.exports = {
       const lobbyCode = interaction.options.getString("lobby").toUpperCase();
 
       if (!lobbies.has(lobbyCode)) {
-        return await interaction.reply({ content: "🚫 **Invalid lobby code.**", ephemeral: true });
+        return interaction.reply({ content: "🚫 **Invalid lobby code.**", ephemeral: true });
       }
 
       joinLobby(interaction, lobbies.get(lobbyCode));
+    } else if (interaction?.options?.getSubcommand() === "leave") {
+      const lobbyCode = interaction.options.getString("lobby").toUpperCase();
+
+      if (!lobbies.has(lobbyCode)) {
+        return interaction.reply({
+          content: "🚫 **Invalid lobby code or you are not in this game.**",
+          ephemeral: true,
+        });
+      }
+
+      const lobby = lobbies.get(lobbyCode);
+
+      if (!lobby.players.some(player => player.id === interaction.user.id)) {
+        return interaction.reply({
+          content: "🚫 **Invalid lobby code or you are not in this game.**",
+          ephemeral: true,
+        });
+      }
+
+      const res = await leaveLobby(interaction, lobby);
+      interaction.reply(res);
     } else {
       if (!interaction.guild) {
         return interaction.reply("🚫 **You must start a game in a guild.**");
@@ -106,6 +133,8 @@ module.exports = {
       const filter = interaction => interaction.message.id === lobbyMsg.id;
       const buttonCollector = lobbyMsg.createMessageComponentCollector({ filter });
 
+      const emitter = new EventEmitter();
+
       lobbies.set(lobbyCode, {
         code: lobbyCode,
         players,
@@ -114,23 +143,62 @@ module.exports = {
         collector: buttonCollector,
         bStack,
         bDrawOne,
+        inProgress: false,
+        emitter,
       });
 
       buttonCollector.on("collect", async i => {
         joinLobby(i, lobbies.get(lobbyCode));
       });
     }
-    async function joinLobby(i, lobby) {
-      const { players, msg, embed, collector, bStack, bDrawOne } = lobby;
+
+    async function joinLobby(i, lobby, force = false) {
+      const { players, msg, embed, collector, bStack, bDrawOne, code, inProgress, emitter } = lobby;
       const player = players.find(player => player.id === i.user.id);
 
+      // check if player is already in the game
       if (player) {
         dmLinkButton.setURL(`https://discord.com/channels/@me/${player.message.channel.id}`);
         return i.reply({
           content: `⚠️ **You are already in the game.**`,
-          components: [{ type: 1, components: [dmLinkButton] }],
+          components: i.channel.type === "DM" ? null : [{ type: 1, components: [dmLinkButton] }],
           ephemeral: true,
         });
+      }
+
+      // check if game is in progress
+      if (inProgress) {
+        return i.reply({ content: "⚠️ **This game is already in progress.**", ephemeral: true });
+      }
+
+      // check if player is already in a game
+      const otherLobby = lobbies.find(lobby => lobby.players.some(player => player.id === i.user.id));
+      if (!force && otherLobby) {
+        const quit = new MessageButton({ label: "Leave and join this game", style: "PRIMARY", customId: "quit" });
+        const join = new MessageButton({ label: "Join anyway", style: "DANGER", customId: "join" });
+
+        await i.deferReply({ ephemeral: true });
+
+        const msg = await i.editReply({
+          content: "⚠️ **You are already in an other game.**",
+          components: [{ type: 1, components: [quit, join] }],
+        });
+
+        const ii = await msg.awaitMessageComponent({ time: 15000 });
+
+        switch (ii.customId) {
+          case "quit": {
+            leaveLobby(ii, otherLobby);
+            joinLobby(ii, lobby, true);
+            break;
+          }
+
+          case "join":
+            joinLobby(ii, lobby, true);
+            break;
+        }
+
+        return;
       }
 
       try {
@@ -143,11 +211,13 @@ module.exports = {
           })
           .catch(() => {
             return i.editReply({
-              content: "🚫 **Failed to join UNO. Please enable DMs in this server's privacy settings and try again.**",
+              content:
+                "🚫 **UNO uses DMs to show you your hand privately. Please enable DMs in this server's privacy settings and try again.**",
               ephemeral: true,
             });
           });
-        const player = new Player(players.length, i.member.user);
+
+        const player = new Player(players.length, i.user);
         players.push(player);
 
         embed.fields[0].value = players.map(player => `*${player.name}*`).join("\n") || "\u200B";
@@ -162,8 +232,8 @@ module.exports = {
         dmLinkButton.setURL(`https://discord.com/channels/@me/${dmMsg.channel.id}`);
 
         i.followUp({
-          content: `✅ **You have joined UNO!**`,
-          components: [{ type: 1, components: [dmLinkButton] }],
+          content: `✅ **You have joined UNO game \`${code}\`.**`,
+          components: i.channel.type === "DM" ? null : [{ type: 1, components: [dmLinkButton] }],
           ephemeral: true,
         });
 
@@ -174,37 +244,27 @@ module.exports = {
           });
 
           if (dmI.customId === "leave") {
-            players.splice(players.indexOf(player));
-
-            dmI.reply({ content: "✅ **You have left UNO.**", ephemeral: true });
-            embed.fields[0].value = players.map(player => `*${player.name}*`).join("\n") || "\u200B";
-
-            msg.edit({ embeds: [embed], components: [{ type: 1, components: [joinButton] }] });
-            for (const p of players) {
-              if (p !== player) {
-                p.message.edit({ embeds: [embed], components: [{ type: 1, components: [startButton, leaveButton] }] });
-              }
-            }
-
-            dmMsg.delete();
+            const res = await leaveLobby(dmI, lobby);
+            dmI.reply(res);
           } else {
             // start game
             dmI.deferUpdate();
             collector.stop();
             embed.setTitle("Game in progress");
             msg.edit({ embeds: [embed], components: [] });
-            lobbies.delete(lobby.code);
-            startGame(players, { bStack, bDrawOne: bDrawOne }, winner => {
+            lobbies.get(code).inProgress = true;
+            embed.description = null;
+            startGame(players, { bStack, bDrawOne: bDrawOne, code, emitter }, winner => {
               // game ended
               embed.setTitle(`${winner.name} won the game!`).setColor("ORANGE");
-              embed.description = null;
               msg.edit({ embeds: [embed] });
               for (const p of players) {
                 p.collector.stop();
               }
+              lobbies.delete(code);
             });
           }
-        } catch {
+        } catch (error) {
           // ignore message delete error
         }
       } catch (error) {
@@ -215,11 +275,36 @@ module.exports = {
         return;
       }
     }
+
+    async function leaveLobby(i, lobby) {
+      const { players, emitter, code, inProgress, embed, msg } = lobby;
+      const player = players.find(player => player.id === i.user.id);
+      if (inProgress) {
+        emitter.emit("leave", player);
+      } else {
+        players.splice(player.i, 1);
+        embed.fields[0].value = players.map(player => `*${player.name}*`).join("\n") || "\u200B";
+
+        msg.edit({ embeds: [embed], components: [{ type: 1, components: [joinButton] }] });
+
+        for (const p of players) {
+          if (p !== player) {
+            p.message.edit({
+              embeds: [embed],
+              components: [{ type: 1, components: [startButton, leaveButton] }],
+            });
+          }
+        }
+
+        player.message.delete();
+      }
+      return { content: `✅ **You have left UNO game \`${code}\`.**`, ephemeral: true };
+    }
   },
 };
 
 async function startGame(players, options, callback) {
-  const { bStack, bDrawOne } = options;
+  const { bStack, bDrawOne, code, emitter } = options;
 
   let iTurn = 0,
     isReverse = false,
@@ -234,6 +319,7 @@ async function startGame(players, options, callback) {
     n = () => (isReverse ? -1 : 1),
     // wrap around if turn exceeds number of players
     nextTurn = () => (iTurn + n() + players.length) % players.length,
+    prevTurn = () => (iTurn + -n() + players.length) % players.length,
     // gets last played card
     topCard = () => discarded[discarded.length - 1],
     chatMessages = [],
@@ -266,19 +352,13 @@ async function startGame(players, options, callback) {
 
       for (const p of players) {
         if (p !== player) {
-          p.message.edit({
-            embeds: createUnoEmbed(p),
-          });
+          p.message.edit(playerUpdateObject(p));
         }
       }
 
       // resend game message so it doesn't get lost in chat
 
-      const msg = await player.user.send({
-        content: handEmojis(player.hand),
-        embeds: createUnoEmbed(player),
-        components: player.pickingColor ? [wildCardRow(player)] : createActionRows(player),
-      });
+      const msg = await player.user.send(playerUpdateObject(player));
 
       player.message.delete();
       player.setMsg(msg);
@@ -290,6 +370,30 @@ async function startGame(players, options, callback) {
   }
 
   startTurn(players[iTurn]);
+
+  emitter.on("leave", player => {
+    player.collector.stop();
+    player.message.delete();
+    players.splice(player.i, 1);
+
+    // fix the offset from splicing player
+    if (player.i < iTurn) iTurn = prevTurn();
+    iTurn = (iTurn + players.length) % players.length;
+
+    // reset indices of player objects
+    for (let i = 0; i < players.length; i++) {
+      players[i].i = i;
+    }
+
+    if (players.length === 1) {
+      isGameOver = true;
+      callback(players[0]);
+    }
+
+    for (const p of players) {
+      p.message.edit(playerUpdateObject(p));
+    }
+  });
 
   async function startTurn(player) {
     try {
@@ -416,11 +520,7 @@ async function startGame(players, options, callback) {
         // check if next player has a +4
         player.pickingColor = true;
 
-        await i.update({
-          embeds: createUnoEmbed(player),
-          components: [wildCardRow()],
-          content: handEmojis(player.hand),
-        });
+        await i.update(playerUpdateObject(player));
 
         // restart the turn so player can pick a color
         startTurn(player);
@@ -429,11 +529,7 @@ async function startGame(players, options, callback) {
       case "Wildcard":
         player.pickingColor = true;
 
-        await i.update({
-          embeds: createUnoEmbed(player),
-          components: [wildCardRow()],
-          content: handEmojis(player.hand),
-        });
+        await i.update(playerUpdateObject(player));
 
         startTurn(player);
         break;
@@ -446,7 +542,8 @@ async function startGame(players, options, callback) {
         `${players[iTurn].name}'s turn`,
         players[iTurn].user.avatarURL({ format: "png", dynamic: true, size: 2048 })
       )
-      .setColor(topCard().color?.toUpperCase() || "NOT_QUITE_BLACK");
+      .setColor(topCard().color?.toUpperCase() || "NOT_QUITE_BLACK")
+      .setTitle(`UNO Game \`${code}\``);
 
     // bold user's name and underline turn
     const fields = players.map(player => {
@@ -492,7 +589,7 @@ async function startGame(players, options, callback) {
 
     for (let i = 0; i < players.length; i++) {
       const { hand } = players[i];
-      if (hand.length === 0) {
+      if (hand.length === 0 || players.length === 1) {
         embed.addField(fields[i], "**🏆Winner**", true);
       } else {
         embed.addField(`${fields[i]} - ${hand.length} card${hand.length > 1 ? "s" : ""}`, handEmojis(hand, true), true);
@@ -500,7 +597,7 @@ async function startGame(players, options, callback) {
     }
 
     if (isGameOver) {
-      embed.setAuthor("Uno Game");
+      embed.author = null;
       const chatEmbed = createChatEmbed(chatMessages);
       if (chatEmbed) return [embed, chatEmbed];
     }
@@ -604,12 +701,11 @@ async function startGame(players, options, callback) {
   }
 
   function playerUpdateObject(p) {
-    const obj = {
+    return {
       content: handEmojis(p.hand),
       embeds: createUnoEmbed(p),
-      components: createActionRows(p),
+      components: p.pickingColor ? [wildCardRow(p)] : createActionRows(p),
     };
-    return obj;
   }
 
   function drawCard(hand, n = 1) {
