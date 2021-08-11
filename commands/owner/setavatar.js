@@ -1,9 +1,8 @@
 module.exports = {
   name: "setavatar",
   description: "set the avatar of the bot",
-  execute(message, args) {
+  async execute(message, args) {
     if (message.author.id !== process.env.OWNERID) {
-      message.reply("You must own the bot to change the avatar!");
       return;
     }
 

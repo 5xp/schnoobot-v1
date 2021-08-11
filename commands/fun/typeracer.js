@@ -8,7 +8,7 @@ module.exports = {
   name: ["typeracer", "type", "t"],
   description: "typing contest",
   usage: `${process.env.PREFIX}typeracer\n${process.env.PREFIX}typeracer top\n${process.env.PREFIX}typeracer me\n${process.env.PREFIX}typeracer <@user>`,
-  execute(message, args) {
+  async execute(message, args) {
     const prompts = JSON.parse(fs.readFileSync("./prompts.json"));
     const currentPrompt = prompts[Math.floor(Math.random() * prompts.length)];
     const t = Math.floor((currentPrompt.length / 4.5) * 1.7);
