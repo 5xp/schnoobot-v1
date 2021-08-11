@@ -2,7 +2,6 @@ const { MessageEmbed, MessageButton, MessageActionRow, Util, Collection } = requ
 const EventEmitter = require("events");
 
 // TODO public lobbies and lobby list?
-// TODO use ready up instead of start game
 
 const lobbies = new Collection();
 
@@ -55,7 +54,7 @@ module.exports = {
     const isSlash = interaction.isCommand?.();
 
     const joinButton = new MessageButton({ style: "PRIMARY", label: "Join", customId: "join" });
-    const startButton = new MessageButton({ style: "SUCCESS", label: "Start", customId: "start" });
+    const startButton = new MessageButton({ style: "SUCCESS", label: "Ready", customId: "start" });
     const leaveButton = new MessageButton({ style: "DANGER", label: "Leave", customId: "leave" });
     const dmLinkButton = new MessageButton({ style: "LINK", label: "Go to DM" });
 
@@ -220,8 +219,9 @@ module.exports = {
         const player = new Player(players.length, i.user);
         players.push(player);
 
-        embed.fields[0].value = players.map(player => `*${player.name}*`).join("\n") || "\u200B";
-        msg.edit({ embeds: [embed], components: [{ type: 1, components: [joinButton] }] });
+        embed.fields[0].value =
+          players.map(player => `${player.ready ? "✅" : "❌"} *${player.name}*`).join("\n") || "\u200B";
+        msg.edit({ embeds: [embed] });
 
         player.setMsg(dmMsg);
 
@@ -239,31 +239,49 @@ module.exports = {
 
         try {
           // wait for start or leave button press
-          const dmI = await dmMsg.awaitMessageComponent({
-            filter: i => (!collector.ended && players.length > 1) || i.customId === "leave",
+          const dmCollector = dmMsg.createMessageComponentCollector({
+            filter: () => !collector.ended,
           });
 
-          if (dmI.customId === "leave") {
-            const res = await leaveLobby(dmI, lobby);
-            dmI.reply(res);
-          } else {
-            // start game
-            dmI.deferUpdate();
-            collector.stop();
-            embed.setTitle("Game in progress");
-            msg.edit({ embeds: [embed], components: [] });
-            lobbies.get(code).inProgress = true;
-            embed.description = null;
-            startGame(players, { bStack, bDrawOne: bDrawOne, code, emitter }, winner => {
-              // game ended
-              embed.setTitle(`${winner.name} won the game!`).setColor("ORANGE");
+          dmCollector.on("collect", async dmI => {
+            if (dmI.customId === "leave") {
+              const res = await leaveLobby(dmI, lobby);
+              dmI.reply(res);
+              dmCollector.stop();
+            } else {
+              const player = players.find(player => player.id === dmI.user.id);
+              player.ready = !player.ready;
+
+              embed.fields[0].value =
+                players.map(player => `${player.ready ? "✅" : "❌"} *${player.name}*`).join("\n") || "\u200B";
+
               msg.edit({ embeds: [embed] });
+              dmI.deferUpdate();
+
               for (const p of players) {
-                p.collector.stop();
+                p.message.edit({ embeds: [embed], components: [{ type: 1, components: [startButton, leaveButton] }] });
               }
-              lobbies.delete(code);
-            });
-          }
+
+              if (players.every(player => player.ready) && players.length > 1) {
+                // start game
+                dmCollector.stop();
+                collector.stop();
+                embed.setTitle("Game in progress");
+                msg.edit({ embeds: [embed], components: [] });
+                lobbies.get(code).inProgress = true;
+                embed.description = null;
+                startGame(players, { bStack, bDrawOne: bDrawOne, code, emitter }, winner => {
+                  // game ended
+                  embed.setTitle(`${winner.name} won the game!`).setColor("ORANGE");
+                  msg.edit({ embeds: [embed] });
+                  for (const p of players) {
+                    p.collector.stop();
+                  }
+                  lobbies.delete(code);
+                });
+              }
+            }
+          });
         } catch (error) {
           // ignore message delete error
         }
@@ -283,7 +301,8 @@ module.exports = {
         emitter.emit("leave", player);
       } else {
         players.splice(player.i, 1);
-        embed.fields[0].value = players.map(player => `*${player.name}*`).join("\n") || "\u200B";
+        embed.fields[0].value =
+          players.map(player => `${player.ready ? "✅" : "❌"} *${player.name}*`).join("\n") || "\u200B";
 
         msg.edit({ embeds: [embed], components: [{ type: 1, components: [joinButton] }] });
 
@@ -799,6 +818,7 @@ function Player(i, user) {
   this.user = user;
   this.id = this.user.id;
   this.name = this.user.username;
+  this.ready = false;
   this.hand = [];
   this.message;
   this.handOffset = 0;
