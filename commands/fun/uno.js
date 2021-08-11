@@ -54,10 +54,10 @@ module.exports = {
   async execute(interaction) {
     const isSlash = interaction.isCommand?.();
 
-    const joinButton = new MessageButton().setStyle("PRIMARY").setLabel("Join").setCustomId("join");
-    const startButton = new MessageButton().setStyle("SUCCESS").setLabel("Start").setCustomId("start");
-    const leaveButton = new MessageButton().setStyle("DANGER").setLabel("Quit").setCustomId("leave");
-    const dmLinkButton = new MessageButton().setStyle("LINK").setLabel("Go to DM");
+    const joinButton = new MessageButton({ style: "PRIMARY", label: "Join", customId: "join" });
+    const startButton = new MessageButton({ style: "SUCCESS", label: "Start", customId: "start" });
+    const leaveButton = new MessageButton({ style: "DANGER", label: "Leave", customId: "leave" });
+    const dmLinkButton = new MessageButton({ style: "LINK", label: "Go to DM" });
 
     if (interaction?.options?.getSubcommand() === "join") {
       const lobbyCode = interaction.options.getString("lobby").toUpperCase();
@@ -650,19 +650,11 @@ async function startGame(players, options, callback) {
       rows[i] = new MessageActionRow();
     }
 
-    const drawCardButton = new MessageButton()
-      .setLabel("Draw")
-      .setStyle("DANGER")
-      .setCustomId("draw")
-      .setDisabled(!isTurn);
+    const drawCardButton = new MessageButton({ style: "DANGER", label: "Draw", customId: "draw", disabled: !isTurn });
 
-    const rightButton = new MessageButton()
-      .setStyle("PRIMARY")
-      .setCustomId("mRight")
-      .setEmoji("➡")
-      .setDisabled(!isTurn);
+    const rightButton = new MessageButton({ style: "PRIMARY", customId: "mRight", emoji: "➡", disabled: !isTurn });
 
-    const leftButton = new MessageButton().setStyle("PRIMARY").setCustomId("mLeft").setEmoji("⬅️").setDisabled(!isTurn);
+    const leftButton = new MessageButton({ style: "PRIMARY", customId: "mLeft", emoji: "⬅", disabled: !isTurn });
 
     if (offset === 0) {
       rows[0].addComponents([drawCardButton]);
@@ -673,10 +665,11 @@ async function startGame(players, options, callback) {
     for (let j = 0; j < shallowHand.length; j++) {
       const r = Math.floor((j + 1) / 5);
 
-      const button = new MessageButton()
-        .setEmoji(getEmojiId(shallowHand[j]))
-        .setStyle("SECONDARY")
-        .setCustomId((j + offset).toString());
+      const button = new MessageButton({
+        style: "SECONDARY",
+        customId: (j + offset).toString(),
+        emoji: getEmojiId(shallowHand[j]),
+      });
 
       if (!isTurn || !shallowHand[j].playable(topCard())) button.setDisabled();
       rows[r].addComponents([button]);
@@ -833,10 +826,12 @@ function wildCardRow() {
   const colors = ["Red", "Yellow", "Green", "Blue"];
   const wildRow = new MessageActionRow();
   for (const color of colors) {
-    const button = new MessageButton()
-      .setStyle("PRIMARY")
-      .setCustomId(`wild${color}`)
-      .setEmoji(emojis[color[0].toLowerCase() + "b"]);
+    const button = new MessageButton({
+      style: "PRIMARY",
+      customId: `wild${color}`,
+      emoji: emojis[color[0].toLowerCase() + "b"],
+    });
+
     wildRow.addComponents([button]);
   }
 
