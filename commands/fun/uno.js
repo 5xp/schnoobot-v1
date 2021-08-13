@@ -671,9 +671,19 @@ async function startGame(players, options, callback) {
 
     const drawCardButton = new MessageButton({ style: "DANGER", label: "Draw", customId: "draw", disabled: !isTurn });
 
-    const rightButton = new MessageButton({ style: "PRIMARY", customId: "mRight", emoji: "➡", disabled: !isTurn });
+    const rightButton = new MessageButton({
+      style: "PRIMARY",
+      customId: "mRight",
+      emoji: "875607895482458122",
+      disabled: !isTurn,
+    });
 
-    const leftButton = new MessageButton({ style: "PRIMARY", customId: "mLeft", emoji: "⬅", disabled: !isTurn });
+    const leftButton = new MessageButton({
+      style: "PRIMARY",
+      customId: "mLeft",
+      emoji: "875608045416218635",
+      disabled: !isTurn,
+    });
 
     if (offset === 0) {
       rows[0].addComponents([drawCardButton]);

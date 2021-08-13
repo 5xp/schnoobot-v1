@@ -15,7 +15,18 @@ module.exports = {
       description: "get the balance of yourself or another user",
       options: [{ name: "user", type: "USER", description: "get the balance of a specific user", required: false }],
     },
-    { name: "top", type: "SUB_COMMAND", description: "get the top balances" },
+    {
+      name: "top",
+      type: "SUB_COMMAND",
+      description: "get the top balances",
+      options: [
+        {
+          name: "global",
+          type: "BOOLEAN",
+          description: "whether to view the global leaderboard or the guild leaderboard",
+        },
+      ],
+    },
   ],
   async execute(interaction, args) {
     const isSlash = interaction.isCommand?.();
@@ -24,15 +35,22 @@ module.exports = {
       await interaction.deferReply?.();
 
       const res = await economySchema.find().sort({ coins: -1 });
-      const sortedIndex = res.filter(entry => entry.coins > 0);
+      let leaderboard = res.filter(entry => entry.coins > 0);
+
+      const gettingGlobal = interaction?.options?.getBoolean("global") ?? false;
+
+      if (!gettingGlobal) {
+        const members = await interaction.guild.members.fetch();
+        leaderboard = leaderboard.filter(entry => members.has(entry._id));
+      }
 
       const maxEntries = 10;
       let currentPage = 0;
-      const numPages = Math.ceil(sortedIndex.length / maxEntries);
+      const numPages = Math.ceil(leaderboard.length / maxEntries);
 
       const createFields = () => {
-        const j = Math.min(maxEntries, sortedIndex.length - maxEntries * currentPage);
-        const shallowIndex = sortedIndex.slice(currentPage * maxEntries, currentPage * maxEntries + j);
+        const j = Math.min(maxEntries, leaderboard.length - maxEntries * currentPage);
+        const shallowIndex = leaderboard.slice(currentPage * maxEntries, currentPage * maxEntries + j);
 
         const field1 = { name: "User", value: "", inline: true };
         const field2 = { name: "Balance", value: "", inline: true };
@@ -50,12 +68,24 @@ module.exports = {
         return new MessageEmbed()
           .setColor("#80ff80")
           .addFields(createFields())
-          .setFooter(`Page ${currentPage + 1}/${numPages}`);
+          .setFooter(`Page ${currentPage + 1}/${numPages}`)
+          .setTitle(`${gettingGlobal ? "Global" : interaction.guild.name} balance leaderboard`);
       };
 
-      const msgObject = () => {
-        const leftButton = new MessageButton().setEmoji("◀").setStyle("PRIMARY").setCustomId("left");
-        const rightButton = new MessageButton().setEmoji("▶").setStyle("PRIMARY").setCustomId("right");
+      const msgObject = (end = false) => {
+        const leftButton = new MessageButton({
+          emoji: "875608045416218635",
+          style: end ? "SECONDARY" : "PRIMARY",
+          customId: "left",
+          disabled: end,
+        });
+
+        const rightButton = new MessageButton({
+          emoji: "875607895482458122",
+          style: end ? "SECONDARY" : "PRIMARY",
+          customId: "right",
+          disabled: end,
+        });
 
         if (currentPage === numPages - 1) rightButton.setDisabled();
         if (currentPage === 0) leftButton.setDisabled();
@@ -66,7 +96,7 @@ module.exports = {
       const msg = isSlash ? await interaction.editReply(msgObject()) : await interaction.reply(msgObject());
 
       const filter = i => i.user.id === (isSlash ? interaction.user.id : interaction.author.id);
-      const collector = msg.createMessageComponentCollector({ filter, time: 30000 });
+      const collector = msg.createMessageComponentCollector({ filter, idle: 20000 });
 
       collector.on("collect", button => {
         if (button.customId === "right") {
@@ -78,6 +108,12 @@ module.exports = {
           currentPage = Math.max(currentPage, 0);
           button.update(msgObject());
         }
+      });
+
+      collector.on("end", () => {
+        msg.edit(msgObject(true)).catch(() => {
+          // ignore
+        });
       });
     } else {
       const member = isSlash

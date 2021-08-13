@@ -33,8 +33,8 @@ module.exports = {
       await interaction.deferReply?.();
 
       const msgObject = () => {
-        const leftButton = new MessageButton().setEmoji("◀").setStyle("PRIMARY").setCustomId("left");
-        const rightButton = new MessageButton().setEmoji("▶").setStyle("PRIMARY").setCustomId("right");
+        const leftButton = new MessageButton().setEmoji("875608045416218635").setStyle("PRIMARY").setCustomId("left");
+        const rightButton = new MessageButton().setEmoji("875607895482458122").setStyle("PRIMARY").setCustomId("right");
 
         if (currentPage === categories.length - 1) rightButton.setDisabled();
         if (currentPage === 0) leftButton.setDisabled();
