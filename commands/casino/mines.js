@@ -115,7 +115,7 @@ module.exports = {
     });
 
     const btnFilter = button => button.user.id === user.id;
-    const btnCollector = msg.createMessageComponentCollector({ filter: btnFilter });
+    const btnCollector = msg.createMessageComponentCollector({ filter: btnFilter, idle: 60000 });
     const cashoutCollector = cashoutMessage.awaitMessageComponent({ filter: btnFilter });
 
     let cellsRevealed = 0;
