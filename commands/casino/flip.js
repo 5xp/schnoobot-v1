@@ -120,7 +120,6 @@ module.exports = {
 
     playAgainButton.setDisabled();
     martingaleButton.setDisabled();
-    reply.edit({ components: [buttonRow()] });
 
     if (i) {
       i.originalBet = interaction.originalBet ?? wager;
@@ -138,8 +137,13 @@ module.exports = {
         module.exports.execute(i);
       } else {
         i.author = interaction.author;
-        module.exports.execute(i, args);
+        module.exports.execute(i);
       }
+    } else {
+      playAgainButton.setStyle("SECONDARY");
+      martingaleButton.setStyle("SECONDARY");
     }
+
+    reply.edit({ components: [buttonRow()] });
   },
 };
