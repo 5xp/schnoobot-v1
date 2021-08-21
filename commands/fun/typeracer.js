@@ -1,6 +1,6 @@
 const fs = require("fs");
 const levenshtein = require("js-levenshtein");
-const Discord = require("discord.js");
+const { MessageEmbed } = require("discord.js");
 const leaderboardSchema = require("@schemas/typeracer-leaderboard-schema");
 const { findMember } = require("@utils/helper.js");
 
@@ -8,40 +8,48 @@ module.exports = {
   name: ["typeracer", "type", "t"],
   description: "typing contest",
   usage: `${process.env.PREFIX}typeracer\n${process.env.PREFIX}typeracer top\n${process.env.PREFIX}typeracer me\n${process.env.PREFIX}typeracer <@user>`,
-  async execute(message, args) {
+  async execute(interaction, args) {
     const prompts = JSON.parse(fs.readFileSync("./prompts.json"));
     const currentPrompt = prompts[Math.floor(Math.random() * prompts.length)];
-    const t = Math.floor((currentPrompt.length / 4.5) * 1.7);
-    let timeStarted;
-    let filter = m => !m.author.bot;
-    let counter = 4;
-    let finishedIDs = [];
 
-    const countdownText = () => {
-      return `**${counter}**...`;
-    };
+    const averageWordLength = 4.5;
+
+    // allot more time for longer prompts
+    const time = Math.floor((currentPrompt.length / averageWordLength) * 1.7);
+
+    let timeStarted;
+    const filter = m => !m.author.bot;
+    let counter = 4;
+    const finishedIDs = [];
+
+    const countdownText = () => `**${counter}**...`;
 
     if (!args.length) {
-      let initialEmbed = new Discord.MessageEmbed()
-        .setColor("#6a00ff")
-        .setDescription(`🕑 You will have ${t} seconds to finish this prompt.`);
-      message.channel.send({ embed: [initialEmbed] }).then(countdown());
+      const initialEmbed = new MessageEmbed({
+        color: "#6a00ff",
+        description: `🕑 You will have ${time} seconds to finish this prompt.`,
+      });
+
+      await interaction.channel.send({ embeds: [initialEmbed] });
+      countdown();
     } else {
       switch (args[0]) {
         case "top":
           showStats();
           break;
+        case "stats":
         case "me":
-          showStats(message.author);
+          showStats(interaction.author);
           break;
         default:
-          showStats(findMember(args[0], message));
+          showStats(findMember(args[0], interaction));
           break;
       }
     }
 
     async function countdown() {
-      const msg = await message.channel.send(countdownText());
+      const msg = await interaction.channel.send(countdownText());
+
       const updateTime = finished => {
         if (finished) return;
         msg.edit(countdownText());
@@ -49,10 +57,10 @@ module.exports = {
         if (counter <= 1) {
           finished = true;
           setTimeout(() => {
-            let promptEmbed = new Discord.MessageEmbed()
+            const promptEmbed = new MessageEmbed()
               .setColor("#2af7ed")
               .setDescription(currentPrompt.replace(/ /g, " \u200B"));
-            msg.edit({ embeds: [promptEmbed] }).then(startGame());
+            msg.edit({ embeds: [promptEmbed], content: null }).then(startGame());
           }, 1000);
         }
 
@@ -63,38 +71,43 @@ module.exports = {
           updateTime(finished);
         }, 1000);
       };
+
       updateTime();
     }
 
     function startGame() {
-      collector = message.channel.createMessageCollector(filter, { time: t * 1000 });
+      const collector = interaction.channel.createMessageCollector({ filter, time: time * 1000 });
       timeStarted = Date.now();
 
       collector.on("collect", m => {
         answerLogic(m);
       });
-      collector.on("end", collected => {});
     }
 
     async function answerLogic(msg) {
       if (finishedIDs.includes(msg.author.id)) return;
 
-      let response = msg.content;
-      let distance = levenshtein(currentPrompt, response);
+      const { content: response } = msg;
+
+      // minimum edit distance (errors)
+      const distance = levenshtein(currentPrompt, response);
+
+      // ignore response if too many errors
       if (distance > currentPrompt.length / 25) return;
-      let elapsedTime = (Date.now() - timeStarted) / 1000;
-      let wpm = (currentPrompt.length / 4.5 / elapsedTime) * 60;
+
+      const elapsedTime = (Date.now() - timeStarted) / 1000;
+      const wpm = (currentPrompt.length / 4.5 / elapsedTime) * 60;
       finishedIDs.push(msg.author.id);
       let pb;
 
       await leaderboardSchema
         .findOneAndUpdate(
           {
-            _id: message.author.id,
+            _id: msg.author.id,
           },
           {
-            _id: message.author.id,
-            name: message.author.username,
+            _id: msg.author.id,
+            name: msg.author.username,
             $max: {
               wpm: wpm.toFixed(1),
             },
@@ -112,45 +125,45 @@ module.exports = {
           pb = result.wpm;
         });
 
-      const summaryEmbed = new Discord.MessageEmbed()
+      const summaryEmbed = new MessageEmbed()
         .setColor("#80ff80")
         .setTitle(`${msg.author.username} finished the race!`)
         .addField("**Place**", `#${finishedIDs.length}`, true)
         .addField("**WPM**", wpm.toFixed(1), true)
-        .addField("**Errors**", distance, true)
-        .addField("**Best WPM**", pb, true);
+        .addField("**Errors**", distance.toString(), true)
+        .addField("**Best WPM**", pb.toString(), true);
 
-      message.channel.send({ embeds: [summaryEmbed] });
+      interaction.channel.send({ embeds: [summaryEmbed] });
     }
 
     async function showStats(user) {
       const index = await leaderboardSchema.find().sort({ wpm: -1 });
-      var statEmbed;
+      let statEmbed;
 
       if (!user) {
         // top 10 leaderboard
-        let top = 10;
-        let j = Math.min(top, index.length);
-        let str = "";
+        const top = 10;
+        const j = Math.min(top, index.length);
 
-        for (i = 0; i < j; i++) {
+        let str = "";
+        for (let i = 0; i < j; i++) {
           str += `**#${i + 1}**: <@${index[i]._id}> | **${index[i].wpm}** wpm\n`;
         }
 
-        statEmbed = new Discord.MessageEmbed()
+        statEmbed = new MessageEmbed()
           .setColor("#80ff80")
           .addFields({ name: `Showing top ${j} typeracer scores`, value: str });
       } else {
         // specific user stats
         const matchId = obj => obj._id == user.id;
-        let i = index.findIndex(matchId);
+        const i = index.findIndex(matchId);
 
         if (!index[i]) {
-          message.reply("there are no stats for this user!");
+          interaction.reply("there are no stats for this user!");
           return;
         }
 
-        statEmbed = new Discord.MessageEmbed()
+        statEmbed = new MessageEmbed()
           .setColor("#80ff80")
           .setTitle(`Showing stats for ${index[i].name}`)
           .addField("**Best WPM**", index[i].wpm, true)
@@ -158,7 +171,7 @@ module.exports = {
           .addField("**Average WPM**", (index[i].wpmsum / index[i].gamesplayed).toFixed(1));
       }
 
-      message.reply({ embeds: [statEmbed], allowedMentions: { repliedUser: false } });
+      interaction.reply({ embeds: [statEmbed], allowedMentions: { repliedUser: false } });
     }
   },
 };
