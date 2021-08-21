@@ -1,4 +1,4 @@
-const { MessageEmbed } = require("discord.js");
+const { MessageEmbed, MessageButton, MessageActionRow } = require("discord.js");
 const { awardMoney, getBalance, formatMoney, formatWager } = require("@utils/economy");
 
 module.exports = {
@@ -25,12 +25,14 @@ module.exports = {
     },
   ],
   async execute(interaction, args) {
-    const isSlash = interaction.isCommand?.();
+    const isSlash = interaction.isCommand?.() || interaction.isInteraction;
     const user = isSlash ? interaction.user : interaction.author;
 
-    let input, wager;
+    let input, wager, value;
 
-    if (isSlash) {
+    if (interaction.newGame) {
+      ({ input, wager } = interaction);
+    } else if (isSlash) {
       input = interaction.options.getString("face");
       wager = formatWager(interaction.options.getString("bet"));
     } else if (args[0] && args[1]) {
@@ -43,11 +45,11 @@ module.exports = {
     switch (input) {
       case "h":
       case "heads":
-        input = 0;
+        value = 0;
         break;
       case "t":
       case "tails":
-        input = 1;
+        value = 1;
         break;
       default:
         return interaction.reply({ content: "⚠ **You must pick heads or tails.**" });
@@ -71,9 +73,10 @@ module.exports = {
       .setTimestamp();
 
     const flip = Math.round(Math.random());
+    const won = value === flip;
 
     let end;
-    if (input == flip) {
+    if (won) {
       end = "**You won!** ";
       flipEmbed.setColor("#2bff00");
       flipEmbed.addField("**Net Gain**", formatMoney(wager), true);
@@ -91,6 +94,52 @@ module.exports = {
 
     flipEmbed.setDescription(outcome);
 
-    interaction.reply({ embeds: [flipEmbed], allowedMentions: { repliedUser: false } });
+    const playAgainButton = new MessageButton({ style: "PRIMARY", label: "Play again", customId: "playAgain" });
+    const martingaleButton = new MessageButton({
+      style: "DANGER",
+      label: "Play again (2x bet)",
+      customId: "martingale",
+    });
+
+    const buttonRow = () => {
+      const row = new MessageActionRow().addComponents([playAgainButton]);
+      if (!won) row.addComponents([martingaleButton]);
+      return row;
+    };
+
+    const reply = await interaction.reply({
+      embeds: [flipEmbed],
+      components: [buttonRow()],
+      allowedMentions: { repliedUser: false },
+      fetchReply: true,
+    });
+
+    const i = await reply.awaitMessageComponent({ filter: i => i.user.id === user.id, time: 10000 }).catch(() => {
+      // ignore error
+    });
+
+    playAgainButton.setDisabled();
+    martingaleButton.setDisabled();
+    reply.edit({ components: [buttonRow()] });
+
+    if (i) {
+      i.originalBet = interaction.originalBet ?? wager;
+      i.newGame = true;
+      i.wager = won ? i.originalBet : wager;
+      i.input = input;
+
+      if (i.customId === "martingale") {
+        i.wager *= 2;
+      }
+
+      if (isSlash) {
+        i.isInteraction = true;
+        i.options = interaction.options;
+        module.exports.execute(i);
+      } else {
+        i.author = interaction.author;
+        module.exports.execute(i, args);
+      }
+    }
   },
 };
