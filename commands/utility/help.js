@@ -17,7 +17,7 @@ module.exports = {
     const categories = [...new Set(client.commands.map(command => command.category))];
 
     if (user.id !== client.application.owner.id) {
-      categories.delete("owner");
+      categories.splice(categories.indexOf("owner"), 1);
     }
 
     const commandsPerCategory = new Collection();
