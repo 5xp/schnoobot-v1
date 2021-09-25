@@ -7,6 +7,7 @@ const { Collection } = require("discord.js");
 module.exports = client => {
   client.commands = new Collection();
   client.features = new Collection();
+  client.subscriptions = new Collection();
 
   // recursively read js files in each folder
   const readFiles = async (dir, collection) => {
